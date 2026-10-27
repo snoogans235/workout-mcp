@@ -29,3 +29,14 @@ npx --yes prisma@7.10.1 validate --schema prisma/schema.prisma
 
 These commands can download Prisma. Project dependencies, Prisma connection configuration, migrations, generated client, and production validation rules are future implementation work.
 
+
+## Agent setup
+
+This project selects reusable agents and skills from the separate `agent_workflows` checkout. Preview and install the project-local copies:
+
+```sh
+bash scripts/setup_agents.sh --dry-run
+bash scripts/setup_agents.sh
+```
+
+If that checkout is not at `../../agent_workflows`, pass `--workflow-repo DIRECTORY` or set `AGENT_WORKFLOWS_DIR`. See [AGENTS.md](AGENTS.md) for the selected agent, roadmap sources, planning boundaries, and tracker setup requirements. Installation does not start planning or create tickets.
