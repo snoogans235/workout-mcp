@@ -1,0 +1,339 @@
+// Workout MCP domain schema — review draft.
+// Targets Prisma 7.10.1 / PostgreSQL. No migration has been applied.
+// Cross-record and JSON validation rules are documented in docs/data-model.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MeasurementType {
+  REPETITIONS
+  WEIGHTED_REPETITIONS
+  DURATION
+}
+
+enum MuscleRole {
+  PRIMARY
+  SECONDARY
+}
+
+enum WeightUnit {
+  LB
+  KG
+}
+
+enum MovementPattern {
+  HORIZONTAL_PUSH
+  HORIZONTAL_PULL
+  VERTICAL_PUSH
+  VERTICAL_PULL
+  SQUAT
+  HIP_HINGE
+  LUNGE
+  CARRY
+  CORE
+  ISOLATION
+  OTHER
+}
+
+enum EquipmentKind {
+  MACHINE
+  CABLE
+  FREE_WEIGHT
+  BODYWEIGHT
+  OTHER
+}
+
+enum TrainingPlanStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum PlannedSessionStatus {
+  PROPOSED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  SUPERSEDED
+}
+
+enum WorkoutStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum SetRole {
+  WARMUP
+  WORKING
+}
+
+model User {
+  id                  String     @id @default(uuid()) @db.Uuid
+  displayName         String
+  timezone            String
+  preferredWeightUnit WeightUnit @default(LB)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+
+  trainingPlans   TrainingPlan[]
+  plannedSessions PlannedSession[]
+  workouts        Workout[]
+}
+
+model Location {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  address    String?
+  timezone   String
+  notes      String?
+  archivedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+
+  equipmentInstances EquipmentInstance[]
+  plannedSessions    PlannedSession[]
+  workouts           Workout[]
+}
+
+model EquipmentModel {
+  id           String        @id @default(uuid()) @db.Uuid
+  manufacturer String?
+  name         String
+  kind         EquipmentKind
+  notes        String?
+  archivedAt   DateTime?     @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+
+  instances EquipmentInstance[]
+  exercises Exercise[]
+
+  @@index([manufacturer, name])
+}
+
+model EquipmentInstance {
+  id               String    @id @default(uuid()) @db.Uuid
+  equipmentModelId String    @db.Uuid
+  locationId       String    @db.Uuid
+  label            String
+  notes            String?
+  archivedAt       DateTime? @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+
+  equipmentModel   EquipmentModel    @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  location         Location          @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  plannedExercises PlannedExercise[]
+  workoutExercises WorkoutExercise[]
+
+  @@unique([locationId, label])
+  @@index([equipmentModelId, locationId])
+}
+
+model Exercise {
+  id               String          @id @default(uuid()) @db.Uuid
+  name             String
+  slug             String          @unique
+  measurementType  MeasurementType
+  movementPattern  MovementPattern
+  equipmentModelId String?         @db.Uuid
+  instructions     String?
+  notes            String?
+  archivedAt       DateTime?       @db.Timestamptz(3)
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+
+  equipmentModel   EquipmentModel?   @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  muscles          ExerciseMuscle[]
+  plannedExercises PlannedExercise[]
+  workoutExercises WorkoutExercise[]
+
+  @@index([movementPattern])
+  @@index([equipmentModelId])
+}
+
+model Muscle {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String @unique
+  groupName String
+
+  exercises ExerciseMuscle[]
+
+  @@index([groupName])
+}
+
+model ExerciseMuscle {
+  exerciseId String     @db.Uuid
+  muscleId   String     @db.Uuid
+  role       MuscleRole
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  muscle   Muscle   @relation(fields: [muscleId], references: [id], onDelete: Restrict)
+
+  @@id([exerciseId, muscleId])
+  @@index([muscleId, role])
+}
+
+model TrainingPlan {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @db.Uuid
+  name                String
+  goals               String[]
+  scheduleGuidance    String
+  progressionGuidance String
+  staleAfterDays      Int                @default(4)
+  status              TrainingPlanStatus @default(DRAFT)
+  version             Int                @default(1)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sessions PlannedSession[]
+
+  @@unique([id, userId])
+  @@index([userId, status])
+}
+
+model PlannedSession {
+  id                 String               @id @default(uuid()) @db.Uuid
+  userId             String               @db.Uuid
+  trainingPlanId     String               @db.Uuid
+  planVersion        Int
+  planSnapshot       Json                 @db.JsonB
+  name               String
+  scheduledFor       DateTime             @db.Date
+  schedulingTimezone String
+  validUntil         DateTime             @db.Timestamptz(3)
+  locationId         String?              @db.Uuid
+  status             PlannedSessionStatus @default(PROPOSED)
+  rationale          String?
+  notes              String?
+  replacesSessionId  String?              @db.Uuid
+  version            Int                  @default(1)
+  generatedAt        DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+
+  user                User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  trainingPlan        TrainingPlan      @relation(fields: [trainingPlanId, userId], references: [id, userId], onDelete: Restrict)
+  location            Location?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  replacesSession     PlannedSession?   @relation("SessionRevisions", fields: [replacesSessionId], references: [id], onDelete: Restrict)
+  replacementSessions PlannedSession[]  @relation("SessionRevisions")
+  exercises           PlannedExercise[]
+  workouts            Workout[]
+
+  @@unique([id, userId])
+  @@index([userId, scheduledFor])
+  @@index([userId, status, validUntil])
+  @@index([trainingPlanId, userId])
+}
+
+model PlannedExercise {
+  id                  String  @id @default(uuid()) @db.Uuid
+  plannedSessionId    String  @db.Uuid
+  exerciseId          String  @db.Uuid
+  equipmentInstanceId String? @db.Uuid
+  position            Int
+  rationale           String?
+  notes               String?
+
+  plannedSession     PlannedSession     @relation(fields: [plannedSessionId], references: [id], onDelete: Restrict)
+  exercise           Exercise           @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  equipmentInstance  EquipmentInstance? @relation(fields: [equipmentInstanceId], references: [id], onDelete: Restrict)
+  sets               PlannedSet[]
+  performedExercises WorkoutExercise[]
+
+  @@unique([plannedSessionId, position])
+  @@index([exerciseId])
+  @@index([equipmentInstanceId])
+}
+
+model PlannedSet {
+  id                String   @id @default(uuid()) @db.Uuid
+  plannedExerciseId String   @db.Uuid
+  position          Int
+  role              SetRole  @default(WORKING)
+  targetDetails     Json     @db.JsonB
+  targetEffortRpe   Decimal? @db.Decimal(3, 1)
+  notes             String?
+
+  plannedExercise PlannedExercise @relation(fields: [plannedExerciseId], references: [id], onDelete: Restrict)
+  performedSets   WorkoutSet[]
+
+  @@unique([plannedExerciseId, position])
+}
+
+model Workout {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @db.Uuid
+  plannedSessionId String?       @db.Uuid
+  locationId       String?       @db.Uuid
+  performedOn      DateTime      @db.Date
+  timezone         String
+  startedAt        DateTime?     @db.Timestamptz(3)
+  completedAt      DateTime?     @db.Timestamptz(3)
+  status           WorkoutStatus @default(IN_PROGRESS)
+  notes            String?
+  version          Int           @default(1)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plannedSession PlannedSession?   @relation(fields: [plannedSessionId, userId], references: [id, userId], onDelete: Restrict)
+  location       Location?         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  exercises      WorkoutExercise[]
+
+  @@index([userId, performedOn, id])
+  @@index([plannedSessionId, userId])
+  @@index([locationId])
+}
+
+model WorkoutExercise {
+  id                  String  @id @default(uuid()) @db.Uuid
+  workoutId           String  @db.Uuid
+  exerciseId          String  @db.Uuid
+  equipmentInstanceId String? @db.Uuid
+  plannedExerciseId   String? @db.Uuid
+  position            Int
+  substitutionReason  String?
+  equipmentSettings   Json?   @db.JsonB
+  notes               String?
+
+  workout           Workout            @relation(fields: [workoutId], references: [id], onDelete: Restrict)
+  exercise          Exercise           @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  equipmentInstance EquipmentInstance? @relation(fields: [equipmentInstanceId], references: [id], onDelete: Restrict)
+  plannedExercise   PlannedExercise?   @relation(fields: [plannedExerciseId], references: [id], onDelete: Restrict)
+  sets              WorkoutSet[]
+
+  @@unique([workoutId, position])
+  @@index([exerciseId, workoutId])
+  @@index([equipmentInstanceId])
+  @@index([plannedExerciseId])
+}
+
+model WorkoutSet {
+  id                String   @id @default(uuid()) @db.Uuid
+  workoutExerciseId String   @db.Uuid
+  plannedSetId      String?  @db.Uuid
+  position          Int
+  role              SetRole  @default(WORKING)
+  details           Json     @db.JsonB
+  effortRpe         Decimal? @db.Decimal(3, 1)
+  notes             String?
+  recordedAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Restrict)
+  plannedSet      PlannedSet?     @relation(fields: [plannedSetId], references: [id], onDelete: Restrict)
+
+  @@unique([workoutExerciseId, position])
+  @@index([plannedSetId])
+}

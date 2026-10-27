@@ -1,0 +1,43 @@
+erDiagram
+    direction LR
+    exercise["Exercise"] {
+        uuid id PK
+        string name
+        string slug UK
+        enum measurementType
+        enum movementPattern
+        uuid equipmentModelId FK
+    }
+    equipmentModel["Equipment Model"] {
+        uuid id PK
+        string manufacturer
+        string name
+        enum kind
+    }
+    equipmentInstance["Equipment Instance"] {
+        uuid id PK
+        uuid equipmentModelId FK
+        uuid locationId FK
+        string label
+    }
+    location["Location"] {
+        uuid id PK
+        string name
+        string timezone
+    }
+    muscle["Muscle"] {
+        uuid id PK
+        string name
+        string groupName
+    }
+    exerciseMuscle["Exercise Muscle"] {
+        uuid exerciseId PK, FK
+        uuid muscleId PK, FK
+        enum role
+    }
+    equipmentModel |o..o{ exercise : "specifies equipment"
+    equipmentModel ||--o{ equipmentInstance : "has instances"
+    location ||--o{ equipmentInstance : "contains"
+    exercise ||--o{ exerciseMuscle : "targets"
+    muscle ||--o{ exerciseMuscle : "associated with"
+

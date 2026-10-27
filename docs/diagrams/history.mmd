@@ -1,0 +1,57 @@
+erDiagram
+    direction LR
+    user["User"] {
+        uuid id PK
+    }
+    workout["Workout"] {
+        uuid id PK
+        uuid userId FK
+        uuid plannedSessionId FK
+        uuid locationId FK
+        date performedOn
+        enum status
+    }
+    workoutExercise["Workout Exercise"] {
+        uuid id PK
+        uuid workoutId FK
+        uuid exerciseId FK
+        uuid equipmentInstanceId FK
+        uuid plannedExerciseId FK
+        int position
+        string substitutionReason
+        json equipmentSettings
+    }
+    workoutSet["Workout Set"] {
+        uuid id PK
+        uuid workoutExerciseId FK
+        uuid plannedSetId FK
+        int position
+        enum role
+        json details
+        decimal effortRpe
+    }
+    plannedSession["Planned Session"] {
+        uuid id PK
+    }
+    plannedExercise["Planned Exercise"] {
+        uuid id PK
+    }
+    plannedSet["Planned Set"] {
+        uuid id PK
+    }
+    exercise["Exercise"] {
+        uuid id PK
+        enum measurementType
+    }
+    equipmentInstance["Equipment Instance"] {
+        uuid id PK
+    }
+    user ||--o{ workout : "records"
+    workout ||--o{ workoutExercise : "contains"
+    workoutExercise ||--o{ workoutSet : "records"
+    exercise ||..o{ workoutExercise : "performed as"
+    equipmentInstance |o..o{ workoutExercise : "used"
+    plannedSession |o..o{ workout : "optional origin"
+    plannedExercise |o..o{ workoutExercise : "optional target"
+    plannedSet |o..o{ workoutSet : "optional target"
+

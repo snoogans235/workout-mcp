@@ -1,0 +1,35 @@
+flowchart TD
+    request(["Ready to train"])
+    context["Review plan and history"]
+    current{"Current session ready?"}
+    reassess["Generate or reassess session"]
+    saveProposal["Save planned session"]
+    begin["Start performed workout"]
+    recommend["Exercise and set target"]
+    available{"Equipment available?"}
+    alternative["Choose suitable alternative"]
+    report["Perform and report set"]
+    clear{"Details clear?"}
+    clarify["Clarify missing details"]
+    record["Record completed set"]
+    nextAction{"Next step?"}
+    adjust["Adjust next set target"]
+    select["Select next exercise"]
+    complete["Finish performed workout"]
+    summary(["Summary and saved history"])
+
+    request --> context --> current
+    current -->|"Yes"| begin
+    current -->|"Missing or stale"| reassess --> saveProposal --> begin
+    begin --> recommend --> available
+    available -->|"No"| alternative --> recommend
+    available -->|"Yes"| report --> clear
+    clear -->|"No"| clarify --> report
+    clear -->|"Yes"| record --> nextAction
+    nextAction -->|"Another set"| adjust --> recommend
+    nextAction -->|"Another exercise"| select --> recommend
+    nextAction -->|"Finish or stop"| complete --> summary
+    style reassess fill:#FFECBD,stroke:#FFC943
+    style record fill:#CDF4D3,stroke:#66D575
+    style alternative fill:#C2E5FF,stroke:#3DADFF
+

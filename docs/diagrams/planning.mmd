@@ -1,0 +1,57 @@
+erDiagram
+    direction LR
+    user["User"] {
+        uuid id PK
+        string timezone
+    }
+    trainingPlan["Training Plan"] {
+        uuid id PK
+        uuid userId FK
+        stringArray goals
+        string scheduleGuidance
+        string progressionGuidance
+        int staleAfterDays
+        enum status
+        int version
+    }
+    plannedSession["Planned Session"] {
+        uuid id PK
+        uuid userId FK
+        uuid trainingPlanId FK
+        int planVersion
+        json planSnapshot
+        date scheduledFor
+        datetime validUntil
+        enum status
+        uuid replacesSessionId FK
+    }
+    plannedExercise["Planned Exercise"] {
+        uuid id PK
+        uuid plannedSessionId FK
+        uuid exerciseId FK
+        uuid equipmentInstanceId FK
+        int position
+    }
+    plannedSet["Planned Set"] {
+        uuid id PK
+        uuid plannedExerciseId FK
+        int position
+        enum role
+        json targetDetails
+        decimal targetEffortRpe
+    }
+    exercise["Exercise"] {
+        uuid id PK
+        enum measurementType
+    }
+    equipmentInstance["Equipment Instance"] {
+        uuid id PK
+        uuid locationId FK
+    }
+    user ||--o{ trainingPlan : "owns"
+    trainingPlan ||--o{ plannedSession : "guides"
+    plannedSession ||--o{ plannedExercise : "proposes"
+    plannedExercise ||--o{ plannedSet : "targets"
+    exercise ||..o{ plannedExercise : "defines"
+    equipmentInstance |o..o{ plannedExercise : "optional selection"
+

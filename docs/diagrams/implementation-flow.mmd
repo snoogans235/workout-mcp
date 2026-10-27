@@ -1,0 +1,18 @@
+sequenceDiagram
+    title One completed set to the next recommendation
+    participant User
+    participant ChatGPTAgent
+    participant McpBackend
+    participant PrismaPostgres
+
+    User->>ChatGPTAgent: Completed set and feedback
+    ChatGPTAgent->>McpBackend: Record set with request key
+    McpBackend->>PrismaPostgres: Commit set and retry record
+    PrismaPostgres-->>McpBackend: Saved facts and version
+    McpBackend-->>ChatGPTAgent: Saved set and session context
+    ChatGPTAgent->>McpBackend: Save assessed target revision
+    McpBackend->>PrismaPostgres: Commit target revision
+    PrismaPostgres-->>McpBackend: Saved revision identifier
+    McpBackend-->>ChatGPTAgent: Saved next target
+    ChatGPTAgent-->>User: Next set or exercise
+
