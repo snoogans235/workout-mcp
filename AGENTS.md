@@ -63,6 +63,14 @@ Delivery is coordinated by workout_workflow_coordinator. Read .agent-workflow fo
 
 The default delivery sequence is code -> independent test -> commit the passing candidate -> verify ticket acceptance at that commit -> assess and complete required documentation -> publish PR. Production defects return to the selected coder; affected verification repeats before a new commit and ticket reconciliation. Three repair rounds are the default limit; return persistent or ambiguous blockers to the developer. A concrete user assignment may request an earlier stopping point.
 
+The coordinator owns the delivery-state transitions for the assigned ticket. Use workflow-youtrack, verify the project's actual state values before each write, and reread the ticket to confirm the result:
+
+- Move the ticket to `Develop` when active implementation begins. Selecting, planning, or merely assigning the ticket is not enough; the coordinator must have started or resumed its delivery branch and dispatched or begun the coding work.
+- Move the ticket to `Review` only after the pull request has been successfully published and its URL and remote head are verified. Leave it in `Develop` if PR publication fails.
+- Move the ticket to `Done` only after the pull request is verified as merged. Approval, a submitted PR, or a closed-but-unmerged PR is not completion.
+
+Record the PR URL with the review transition and merge evidence with the done transition. Preserve unrelated ticket fields and human edits. If a required state or tracker operation is unavailable, report the lifecycle gap instead of choosing a misleading substitute. The default delivery assignment ends with the ticket in `Review`; the later merge owner or a resumed coordinator assignment performs the verified `Done` transition.
+
 Ticket verification means reconciling each acceptance condition with evidence for the committed tree. Test/support edits belong to the candidate too. If the final tree differs from the tested candidate, refresh affected verification. Keep the tested commit and limitations in the tracker handoff. Do not blindly rerun all checks when the existing evidence matches the committed candidate.
 
 Use a dedicated ticket branch from the verified main base; confirm the ticket and checkout ownership before creating or resuming it. Choose a readable ticket-based name consistent with existing branches. Never overwrite another checkout or use pending sibling work as an implicit prerequisite. Resolve an existing conflicting branch/base before editing.

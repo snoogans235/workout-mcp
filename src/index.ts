@@ -1,5 +1,3 @@
-function greet(name: string): string {
-    return `Workout MCP is ready, ${name}.`;
-}
+import { greet } from "./greet.js";
 
 console.log(greet("Jonathan"));
