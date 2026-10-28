@@ -9,7 +9,10 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --project tsconfig.test.json",
     "build": "tsc",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "check": "npm run typecheck && npm run typecheck:test && npm run build && npm test",
     "start": "node --enable-source-maps dist/index.js"
   },
   "keywords": [],

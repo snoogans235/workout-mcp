@@ -8,10 +8,14 @@
 - Database-free SQL preview produced no output; SQL generation is unverified. No SQL was applied.
 - FigJam original draft replaced by catalog, planning, and workout-history diagrams.
 
+## Implemented development foundation
+
+The repository contains a Node/TypeScript scaffold, a readiness-greeting unit test, separate application and test-source typechecks, a source-only build, and a shared local/CI check command. See [development and checks](../README.md#development-and-checks). The Nix environment declares Node 24 and PostgreSQL 18, and `scripts/dev.sh` manages an already-initialized local cluster; this does not establish an application database or migration state.
+
 ## Next implementation stages
 
 1. Review the schema assumptions in [data-model.md](data-model.md): catalog visibility, load semantics, one-location sessions, plan staleness boundaries, and measurement validators.
-2. Set up this project's Node/TypeScript dependencies and local PostgreSQL with durable storage. Pin compatible Prisma packages. Create Prisma configuration and a reviewed initial migration with required CHECK constraints/triggers. The earlier scaffold in the chat workspace has not been moved here.
+2. Configure the Prisma runtime and migration workflow against the local PostgreSQL environment. Pin compatible Prisma packages and create a reviewed initial migration with required CHECK constraints/triggers. Application database and migration state remain unverified.
 3. Implement the catalog and equipment queries. Verify exact exercise/machine histories can be distinguished and catalog definitions cannot be deleted out from under records.
 4. Implement runtime measurement validation and performed workout persistence. Verify atomic writes, units, ownership, ordering, corrections, and durability after restart.
 5. Implement durable plans, planned sessions/targets, plan snapshots, and stale-session replacement. Test expiry boundaries and concurrent updates.
@@ -30,7 +34,7 @@
 - Reject cross-user plan links and mismatched planned-exercise/set links.
 - Retry a write without duplicating rows and reject stale corrections.
 
-No server, database, migrations, or business-behavior tests exist yet.
+No Express/MCP server, application migrations, or workout business-behavior tests exist yet.
 
 
 ## Adaptive workout interaction
