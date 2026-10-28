@@ -7,3 +7,4 @@ dist/
 # Generated project-local agents and shared skills
 /.codex/agents/
 /.agents/skills/
+artifacts/

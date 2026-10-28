@@ -31,9 +31,15 @@ The default source is ../../agent_workflows relative to this repository. For a d
 bash scripts/setup_agents.sh --workflow-repo /path/to/agent_workflows
 ```
 
-AGENT_WORKFLOWS_DIR can also supply that source directory. The script installs only the project's selected components:
+AGENT_WORKFLOWS_DIR can also supply that source directory. The script reads .agent-workflow and installs its selected roles and skills locally. That file is declarative data, not executable shell code; edit its role mappings to change selections. The current components are:
 
-- .codex/agents/workout_roadmap_design.toml: the project-prefixed roadmap design agent.
+- .codex/agents/workout_workflow_coordinator.toml: project workflow coordinator.
+- .codex/agents/workout_roadmap_design.toml: roadmap discovery and ticket decomposition.
+- .codex/agents/workout_typescript_backend_coder.toml: TypeScript backend implementation.
+- .codex/agents/workout_backend_tester.toml: independent acceptance, edge, and negative-case testing.
+- .codex/agents/workout_agent_documenter.toml: focused technical context for future agents.
+- .codex/agents/workout_internal_documenter.toml: developer and maintainer guidance.
+- .codex/agents/workout_user_documenter.toml: conversational product guidance for end users.
 - .agents/skills/ticket-writing/: shared plain-language ticket conventions.
 - .agents/skills/workflow-pr/: PR conventions and judgment-based sizing guidance.
 - .agents/skills/workflow-commit/: commit conventions and tracker-independent ticket verification.
@@ -45,7 +51,7 @@ The generated directories are ignored by Git. Modify reusable definitions in age
 
 This project decides which agents to use and how to sequence their work. The shared repository supplies reusable roles and skills; installing them does not start work or authorize ticket creation.
 
-The currently selected agent is workout_roadmap_design. Invoke it when the developer requests roadmap planning or ticket decomposition, not merely when opening the project. Its assignment starts at docs/roadmap.md unless the developer supplies a different source.
+The planning role is workout_roadmap_design, selected in .agent-workflow. Invoke it when the developer requests roadmap planning or ticket decomposition, not merely when opening the project. Its assignment starts at docs/roadmap.md unless the developer supplies a different source.
 
 The agent follows supporting references, inspects the implementation, searches existing work, and proposes a matching Epic and small, executable Story breakdown. It may create or update the Epic planning summary when the developer authorizes roadmap capture. Detailed Stories are created or updated only after the developer approves the breakdown. Reuse existing decisions and authorization; do not ask for the same approval again.
 
@@ -53,7 +59,21 @@ Stories may be intended for coding, independent testing, or documentation agents
 
 Record planning summaries, source references, coverage, decisions, approval, and ticket links in the Epic. Stories hold the executable assignments. Keep status and blockers in the tracker. Do not create a parallel planning document in docs/. Flag specification gaps for documentation follow-up; do not let the planning agent implement product code, tests, schemas, or documentation.
 
-Coding, testing, and documentation agent definitions and their execution workflow have not yet been configured for this project. Planning does not automatically dispatch implementation. Bring material unknowns to the developer rather than initiating experiments.
+Delivery is coordinated by workout_workflow_coordinator. Read .agent-workflow for the actual role mappings, required roles, stage order, base branch, repair budget, and permission policy. Do not select a substitute merely because another agent is installed. Required roles must be available in the active session; an on-disk definition alone is not proof of availability.
+
+The default delivery sequence is code -> independent test -> commit the passing candidate -> verify ticket acceptance at that commit -> assess and complete required documentation -> publish PR. Production defects return to the selected coder; affected verification repeats before a new commit and ticket reconciliation. Three repair rounds are the default limit; return persistent or ambiguous blockers to the developer. A concrete user assignment may request an earlier stopping point.
+
+Ticket verification means reconciling each acceptance condition with evidence for the committed tree. Test/support edits belong to the candidate too. If the final tree differs from the tested candidate, refresh affected verification. Keep the tested commit and limitations in the tracker handoff. Do not blindly rerun all checks when the existing evidence matches the committed candidate.
+
+Use a dedicated ticket branch from the verified main base; confirm the ticket and checkout ownership before creating or resuming it. Choose a readable ticket-based name consistent with existing branches. Never overwrite another checkout or use pending sibling work as an implicit prerequisite. Resolve an existing conflicting branch/base before editing.
+
+Commit, PR publication, and merging require explicit authorization from the developer's actual assignment or standing instructions. The configured workflow order is not permission by itself. A request covering a complete operation remains valid across handoffs; do not ask repeatedly. Prepare reviewable work and stop at an ungranted operation. Default delivery ends at a verified published PR; merging and ticket closure remain separately controlled.
+
+Documentation is conditional on the ticket's actual impact and is routed independently by audience: agents to workout_agent_documenter, internal developers and maintainers to workout_internal_documenter, and end users to workout_user_documenter. Assign only affected audiences; an explained no-update disposition is valid. Required updates follow ticket verification and must be included in the final committed candidate before PR publication, with affected checks refreshed.
+
+Preserve the project's useful existing documentation layout unless a scoped ticket approves a reorganization. AGENTS.md remains the small agent entry point. docs/README.md and the current architecture, data-model, implementation-flow, user-flow, roadmap, FigJam, and diagram sources remain canonical where they already own a fact. New docs/agents, docs/internal, docs/users, or docs/reference material should be created only when the assigned content needs it; do not duplicate shared facts merely to populate the newer audience directories. Give each shared reference or navigation file one owner per assignment.
+
+The coordinator owns dispatch and cross-role status, not production implementation or test authoring. Planning does not automatically start delivery; invoke delivery for an assigned ready ticket. Bring material unknowns to the developer rather than initiating experiments. Installation never starts the workflow.
 
 ## Tracker and delivery conventions
 
@@ -61,7 +81,7 @@ YouTrack is the intended tracker. Its instance, project, existing Epic, issue ty
 
 Use the installed ticket-writing and workflow-youtrack skills for authorized ticket work. Write plain, outcome-focused tickets that a teammate can understand without reading the conversation. Never claim an unverified ticket operation succeeded.
 
-For later authorized delivery, follow workflow-commit and workflow-pr. Commits use verified ticket IDs and change tags. PR titles use <TICKET-ID>: <Summary> without tags. Do not invent a branching strategy, merge policy, or automatic state transitions; resolve those as part of this project's execution workflow.
+For later authorized delivery, follow workflow-commit and workflow-pr. Commits use verified ticket IDs and change tags. PR titles use <TICKET-ID>: <Summary> without tags. Use the project-owned branching and authorization rules above. Resolve actual tracker states before transitions; PR publication is not ticket completion or permission to merge.
 
 ## Development boundaries
 

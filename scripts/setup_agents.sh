@@ -25,9 +25,5 @@ if [[ ! -f "$workflow_repo/scripts/install.sh" ]]; then
     exit 2
 fi
 exec bash "$workflow_repo/scripts/install.sh" \
-    --agent roadmap_design \
-    --prefix workout \
-    --skill workflow-youtrack \
-    --agents-target "$project_root/.codex/agents" \
-    --target "$project_root/.agents/skills" \
+    --project "$project_root" \
     ${options[@]+"${options[@]}"}

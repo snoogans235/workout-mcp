@@ -1,0 +1,21 @@
+# Declarative project selections and delivery policy; never source this as shell code.
+prefix=workout
+role.coordinator=workflow_coordinator
+role.planner=roadmap_design
+role.coder=typescript_backend_coder
+role.tester=backend_tester
+role.documenter=agent_documenter,internal_documenter,user_documenter
+route.documenter.agents=agent_documenter
+route.documenter.internal=internal_documenter
+route.documenter.users=user_documenter
+required_roles=coordinator,coder,tester
+stages=code,test,commit,verify_ticket,publish_pr
+base_branch=main
+branch_policy=ticket_branch
+documentation=when_required
+max_repair_rounds=3
+commit=explicit
+publish_pr=explicit
+merge=explicit
+
+skill.workflow-youtrack=enabled
