@@ -88,6 +88,48 @@ The domain schema is a review draft. No initial migration has been created or ap
 
 All migration commands validate `DATABASE_URL` before invoking Prisma. Development migration commands use Prisma's shadow-database workflow and can require database creation privileges; `--create-only` is not a general read-only database check. Select the target and required permissions deliberately. No migration command is part of `npm run check`, and no reset or seed workflow is provided here.
 
+## PostgreSQL integration tests
+
+Use Node 24 and an already-running PostgreSQL 18 server. The selected role must be able to create/drop its test databases and terminate remaining connections to them. The runner does not start or reset the local cluster. With the existing development environment running, enter `nix develop` for Node and PostgreSQL tools.
+
+Set a separate `TEST_DATABASE_ADMIN_URL` in ignored `.env` or the invoking environment. Select an existing administrative database outside the `workout_mcp_test_` namespace; the runner never derives this setting from the application's `DATABASE_URL`. For the local socket, replace the illustrative role, database, and encoded absolute directory:
+
+```dotenv
+TEST_DATABASE_ADMIN_URL=postgresql://example_role@localhost:55432/example_admin_database?host=%2Fpath%2Fto%2Fworkout-mcp%2F.local%2Frun
+```
+
+Run:
+
+```sh
+npm run test:integration
+```
+
+Each invocation creates its own `workout_mcp_test_<32 hexadecimal characters>` database and ownership marker, applies checked-in migrations with `migrate deploy`, and runs `tests/integration/*.integration.ts` through the Node test runner. Add database-backed scenarios there; ordinary `*.test.ts` tests remain part of the database-free `npm run check`.
+
+There are currently no checked-in migrations. The runner reports that explicitly; the existing integration scenario proves fresh-database isolation and transaction rollback, not domain-schema behavior. Concurrent invocations use different databases. Application clients close before cleanup; the runner reaps subprocesses and drops only its generated, owned database on success, failure, `INT`, or `TERM`.
+
+If cleanup fails, the command exits nonzero and reports the generated database name. Give that exact name and run context to a maintainer for targeted inspection; do not reset the development database or delete every database matching a prefix. `SIGKILL`, machine shutdown, and loss of administrative access can prevent cleanup. For an initial configuration failure, check the explicit admin URL, PostgreSQL major version, and role privileges before retrying.
+
+### Test database artifacts
+
+Artifacts are optional. Select a mode in the invoking environment:
+
+| Mode | Result |
+| --- | --- |
+| `TEST_DB_ARTIFACT=off` (default) | No dump. |
+| `TEST_DB_ARTIFACT=on-failure` | Dump only when the test/migration run fails or is interrupted. |
+| `TEST_DB_ARTIFACT=always` | Dump on every run. |
+
+```sh
+TEST_DB_ARTIFACT=on-failure npm run test:integration
+```
+
+Artifact modes require PostgreSQL 18 `pg_dump` and `pg_restore` on `PATH`; the Nix environment supplies them. Before database cleanup, the runner dumps only its generated test database in custom format and validates it with `pg_restore --list`. Validated dumps stay under ignored `.local/test-artifacts/`, with directory mode `0700` and file mode `0600`. Existing artifact paths and symlinks are rejected. Dump or validation errors are reported, make the run fail, and still invoke database cleanup.
+
+Custom archives can retain owner role metadata. Any later `pg_restore` operation must use `--no-owner --no-acl`; `pg_dump --no-owner` alone does not suppress ownership restoration for custom format. These test artifacts are not a production backup/restore workflow. Keep fixtures synthetic and free of credentials or development/production data; artifact names and runner output do not contain connection URLs or passwords.
+
+The dedicated PostgreSQL 18 CI job runs the same integration command with artifact mode `off`. No CI upload step is configured; artifact-upload access policy remains unresolved for this public repository.
+
 
 ## Agent setup
 

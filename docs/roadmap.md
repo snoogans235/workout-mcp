@@ -14,6 +14,8 @@ The repository contains a Node/TypeScript scaffold, a readiness-greeting unit te
 
 Prisma 7.10.1 packages, configuration, ignored client generation, migration commands, and an explicit reusable client/pool boundary are implemented. Database-free verification and read-only connection, disconnection, and resource release against an existing database through a Unix socket pass. See [Prisma configuration](../README.md#prisma-and-database-configuration).
 
+The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique test database per invocation, verifies transaction rollback/isolation, and optionally retains validated local test dumps. The migration set is empty, so these checks do not prove domain-schema behavior. A dedicated PostgreSQL 18 CI job is configured with artifacts disabled; CI upload access policy remains unresolved.
+
 ## Next implementation stages
 
 1. Review the schema assumptions in [data-model.md](data-model.md): catalog visibility, load semantics, one-location sessions, plan staleness boundaries, and measurement validators.
