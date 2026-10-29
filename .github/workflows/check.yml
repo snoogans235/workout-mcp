@@ -19,3 +19,38 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+  integration:
+    runs-on: ubuntu-latest
+    # Matching client/server majors also make custom dump validation reproducible.
+    container: postgres:18
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DB_ARTIFACT: "off"
+    steps:
+      - name: Configure masked test administrative connection
+        shell: bash
+        env:
+          TEST_DB_HOST: postgres
+          TEST_DB_PORT: "5432"
+          TEST_DB_ROLE: postgres
+          TEST_DB_DATABASE: postgres
+        run: |
+          admin_url="$(printf '%s://%s@%s:%s/%s' postgresql "$TEST_DB_ROLE" "$TEST_DB_HOST" "$TEST_DB_PORT" "$TEST_DB_DATABASE")"
+          printf '::add-mask::%s\n' "$admin_url"
+          printf 'TEST_DATABASE_ADMIN_URL=%s\n' "$admin_url" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
