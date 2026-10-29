@@ -136,7 +136,7 @@ Training-plan acceptance and progression behavior remain agent/service policies.
 
 Prisma 7.10.1 format and validate passed for the saved schema, which declares 14 models and 9 enums. A database-free migration-diff command exited successfully but produced no SQL; SQL generation is therefore unverified. Structural validation does not verify business behavior or apply anything to PostgreSQL.
 
-No application dependencies were installed in this project. The validator was installed in a temporary workspace. No database, migration, generated application client, HTTP server, or MCP tool was created.
+Prisma 7.10.1 dependencies and configuration are now installed in this project, and the application client is generated into ignored output. Database-free format, validation, generation, typechecks, and tests pass. No application migration has been created or applied; live PostgreSQL lifecycle verification remains pending. No HTTP server or MCP tool exists yet. See [Prisma configuration and migration workflow](../README.md#prisma-and-database-configuration).
 
 [Prisma 7 schema reference](https://www.prisma.io/docs/orm/v7/reference/prisma-schema-reference)
 
