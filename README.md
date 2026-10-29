@@ -43,10 +43,23 @@ npm run prisma:generate
 
 Generation writes the `prisma-client` output to ignored `src/generated/prisma/`. Application typechecking and builds regenerate it automatically; on a clean checkout, run generation before standalone `npm test` or `npm run typecheck:test`. Generated sources and build output are not committed. Formatting and structural validation do not approve the schema's business rules or apply it to PostgreSQL; see [remaining data-model invariants](docs/data-model.md).
 
-Database operations require an explicitly supplied `DATABASE_URL` with PostgreSQL protocol, user, host, port, and database. Include a URL-encoded password when authentication requires it. No `.env` loader is configured: export the variable in the invoking shell. This non-secret example matches the launcher's TCP endpoint; replace both example names with a deliberately selected existing role and database:
+Database operations require an explicitly supplied `DATABASE_URL` with PostgreSQL protocol, user, host, port, and database. Include a URL-encoded password when authentication requires it. Runtime entry points, Prisma CLI commands, and migration/lifecycle scripts load the optional project-root `.env` using Node 24's built-in loader. Exported variables take precedence, including an exported empty value; a missing file is harmless, while other loading errors produce a sanitized message.
+
+For local configuration, copy the committed template without overwriting an existing file:
 
 ```sh
-export DATABASE_URL='postgresql://example_role@127.0.0.1:55432/example_database'
+cp -n .env.example .env
+```
+
+Edit `.env` and replace every placeholder with the deliberately selected existing role, host, port, and database before running commands. The local launcher uses `127.0.0.1:55432`; this non-secret example illustrates that endpoint, with example names to replace:
+
+```dotenv
+DATABASE_URL=postgresql://example_role@127.0.0.1:55432/example_database
+```
+
+Keep `.env` private and ignored by Git; commit only the placeholder `.env.example`. A configured malformed URL, including the unedited template, is rejected even by Prisma's database-free commands. Leave `DATABASE_URL` unset and omit `.env` when only generating or checking code. To override a local value, export `DATABASE_URL` in the invoking shell. After selecting a reachable database and completing configuration, from Node 24 or the declared Nix shell run:
+
+```sh
 npm run database:check
 ```
 
