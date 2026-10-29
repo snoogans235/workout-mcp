@@ -128,7 +128,7 @@ Artifact modes require PostgreSQL 18 `pg_dump` and `pg_restore` on `PATH`; the N
 
 Custom archives can retain owner role metadata. Any later `pg_restore` operation must use `--no-owner --no-acl`; `pg_dump --no-owner` alone does not suppress ownership restoration for custom format. These test artifacts are not a production backup/restore workflow. Keep fixtures synthetic and free of credentials or development/production data; artifact names and runner output do not contain connection URLs or passwords.
 
-The dedicated PostgreSQL 18 CI job runs the same integration command with artifact mode `off`. No CI upload step is configured; artifact-upload access policy remains unresolved for this public repository.
+The dedicated PostgreSQL 18 CI job runs the same integration command with artifact mode `off`. Dump uploads are disabled for this public repository; restricted CI uploads are deferred. Local artifact modes remain available.
 
 
 ## Agent setup
