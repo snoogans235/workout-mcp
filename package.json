@@ -21,7 +21,8 @@
     "migrate:dev": "bash scripts/prisma-migrate.sh dev",
     "migrate:status": "bash scripts/prisma-migrate.sh status",
     "migrate:deploy": "bash scripts/prisma-migrate.sh deploy",
-    "database:check": "npm run prisma:generate && bash scripts/database-check.sh"
+    "database:check": "npm run prisma:generate && bash scripts/database-check.sh",
+    "test:integration": "npm run prisma:generate && bash scripts/test-integration.sh"
   },
   "keywords": [],
   "author": "",
