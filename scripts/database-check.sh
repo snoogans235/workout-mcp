@@ -6,8 +6,10 @@ cd "$project_root"
 
 node --import tsx --input-type=module -e '
 import { createDatabase } from "./src/database/index.ts";
+import { loadProjectEnv } from "./src/environment.ts";
 let database;
 try {
+    loadProjectEnv();
     database = createDatabase(process.env.DATABASE_URL);
     await database.connect();
     console.log("Database connection succeeded.");
