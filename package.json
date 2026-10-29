@@ -8,12 +8,20 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run prisma:generate && tsc --noEmit",
     "typecheck:test": "tsc --project tsconfig.test.json",
-    "build": "tsc",
+    "build": "npm run prisma:generate && tsc",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "check": "npm run typecheck && npm run typecheck:test && npm run build && npm test",
-    "start": "node --enable-source-maps dist/index.js"
+    "start": "node --enable-source-maps dist/index.js",
+    "prisma:format": "prisma format --config prisma.config.ts",
+    "prisma:validate": "prisma validate --config prisma.config.ts",
+    "prisma:generate": "prisma generate --config prisma.config.ts",
+    "migrate:create": "bash scripts/prisma-migrate.sh dev --create-only",
+    "migrate:dev": "bash scripts/prisma-migrate.sh dev",
+    "migrate:status": "bash scripts/prisma-migrate.sh status",
+    "migrate:deploy": "bash scripts/prisma-migrate.sh deploy",
+    "database:check": "npm run prisma:generate && bash scripts/database-check.sh"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +29,14 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "8.23.1"
   }
 }

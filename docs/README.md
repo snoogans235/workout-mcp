@@ -3,6 +3,7 @@
 Canonical documentation for `/Users/jnewton/Projects/typescript/workout_mcp`.
 
 - [Development setup and automated checks](../README.md#development-and-checks)
+- [Prisma configuration and migration commands](../README.md#prisma-and-database-configuration)
 - [Confirmed adaptive workout user flow](user-flow.md)
 - [High-level implementation swimlane](implementation-flow.md)
 - [FigJam layout status](figjam-status.md)

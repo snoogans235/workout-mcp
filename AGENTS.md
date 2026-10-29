@@ -94,3 +94,5 @@ For later authorized delivery, follow workflow-commit and workflow-pr. Commits u
 ## Development boundaries
 
 Use Bash for repository scripts. The declared development environment is in flake.nix; scripts/dev.sh manages the existing local PostgreSQL cluster. Do not start services or apply migrations for a read-only planning assignment. Inspect package.json for current build and typecheck commands; do not report unrun checks as passing.
+
+When changing Prisma configuration, generated-client handling, or database lifecycle, read [Prisma and database configuration](README.md#prisma-and-database-configuration) and the following migration workflow before editing.
