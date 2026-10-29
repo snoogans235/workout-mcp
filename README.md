@@ -6,7 +6,7 @@ Selected stack: TypeScript, Node.js, Express, PostgreSQL, and Prisma. Local deve
 
 ## Current status
 
-The TypeScript scaffold builds and runs a readiness greeting. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and migration commands are implemented. Express/MCP serving, application migrations, and workout behavior remain planned. Live PostgreSQL connection and resource-release verification is still pending; the scaffold does not establish an application database.
+The TypeScript scaffold builds and runs a readiness greeting. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and migration commands are implemented. PostgreSQL connection, disconnection, and resource release have been verified through a local Unix socket. Express/MCP serving, application migrations, and workout behavior remain planned; the scaffold does not establish an application database.
 
 - Prisma schema: `prisma/schema.prisma`
 - [Data model and remaining invariants](docs/data-model.md)
@@ -57,13 +57,21 @@ Edit `.env` and replace every placeholder with the deliberately selected existin
 DATABASE_URL=postgresql://example_role@127.0.0.1:55432/example_database
 ```
 
+The launcher also places its Unix socket in the project's `.local/run` directory. To select that transport, use `localhost` in the URL authority and one `host` query containing the URL-encoded absolute socket directory, while retaining the explicit user, port, and database:
+
+```dotenv
+DATABASE_URL=postgresql://example_role@localhost:55432/example_database?host=%2Fpath%2Fto%2Fworkout-mcp%2F.local%2Frun
+```
+
+Replace the illustrative directory with your checkout's absolute `.local/run` path, then encode it with `encodeURIComponent`; `/` becomes `%2F`. Duplicate socket hosts, relative directories, and conflicting destination query parameters are rejected. PostgreSQL uses separate authentication rules for Unix sockets and TCP: a working local socket connection does not establish TCP password authentication. The verified local lifecycle uses the existing socket authentication configuration without changing it.
+
 Keep `.env` private and ignored by Git; commit only the placeholder `.env.example`. A configured malformed URL, including the unedited template, is rejected even by Prisma's database-free commands. Leave `DATABASE_URL` unset and omit `.env` when only generating or checking code. To override a local value, export `DATABASE_URL` in the invoking shell. After selecting a reachable database and completing configuration, from Node 24 or the declared Nix shell run:
 
 ```sh
 npm run database:check
 ```
 
-The check connects, runs `SELECT 1`, and disconnects; it does not create tables, migrate, or start PostgreSQL. Success prints `Database connection succeeded.` Missing/malformed configuration is rejected before driver fallback; connection failures produce a sanitized message. Verify the selected database is already reachable if the check fails. Live connect/disconnect and resource release have not yet been verified against a selected database.
+The check connects, runs `SELECT 1`, and disconnects; it does not create tables, migrate, or start PostgreSQL. Success prints `Database connection succeeded.` Missing/malformed configuration is rejected before driver fallback; connection failures produce a sanitized message. Verify the selected database and transport are already reachable if the check fails. Independent read-only socket verification confirmed the database backend was released after disconnection.
 
 For application integration, import `createDatabase` from `src/database/index.ts`, construct it once with explicit configuration, and share its `client` rather than constructing a pool per request. Import and construction do not connect. Await `connect()` explicitly and await `disconnect()` during shutdown or in a `finally` block; shutdown disconnects Prisma and ends the pool. The readiness-greeting entry point does not invoke this boundary.
 
