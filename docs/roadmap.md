@@ -16,6 +16,8 @@ Prisma 7.10.1 packages, configuration, ignored client generation, migration comm
 
 The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique test database per invocation, verifies transaction rollback/isolation, and optionally retains validated local test dumps. The migration set is empty, so these checks do not prove domain-schema behavior. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
 
+The [local MCP server](../README.md#local-mcp-server) exposes `/mcp` on loopback with a strict, read-only `server_status` tool. Official-client discovery/calls and process shutdown are verified; the server does not connect to PostgreSQL or implement the workout flow.
+
 ## Next implementation stages
 
 1. Review the schema assumptions in [data-model.md](data-model.md): catalog visibility, load semantics, one-location sessions, plan staleness boundaries, and measurement validators.
@@ -23,7 +25,7 @@ The separate [PostgreSQL integration command](../README.md#postgresql-integratio
 3. Implement the catalog and equipment queries. Verify exact exercise/machine histories can be distinguished and catalog definitions cannot be deleted out from under records.
 4. Implement runtime measurement validation and performed workout persistence. Verify atomic writes, units, ownership, ordering, corrections, and durability after restart.
 5. Implement durable plans, planned sessions/targets, plan snapshots, and stale-session replacement. Test expiry boundaries and concurrent updates.
-6. Add Express and the official MCP SDK. Define focused tool contracts, annotations, structured errors, and persistent retry-key protection. Test protocol discovery and representative/invalid calls.
+6. Extend the local MCP transport with focused domain tool contracts, annotations, structured errors, and persistent retry-key protection. Test representative and invalid domain calls.
 7. Connect ChatGPT through the selected hosting/private-connectivity option. Verify identity, permission boundaries, backups, and a complete plan-to-workout conversation.
 
 ## End-to-end acceptance scenarios
@@ -38,7 +40,7 @@ The separate [PostgreSQL integration command](../README.md#postgresql-integratio
 - Reject cross-user plan links and mismatched planned-exercise/set links.
 - Retry a write without duplicating rows and reject stale corrections.
 
-No Express/MCP server, application migrations, or workout business-behavior tests exist yet.
+No application migrations or workout business-behavior tests exist yet.
 
 
 ## Adaptive workout interaction

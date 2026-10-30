@@ -6,7 +6,7 @@ Selected stack: TypeScript, Node.js, Express, PostgreSQL, and Prisma. Local deve
 
 ## Current status
 
-The TypeScript scaffold builds and runs a readiness greeting. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and migration commands are implemented. PostgreSQL connection, disconnection, and resource release have been verified through a local Unix socket. Express/MCP serving, application migrations, and workout behavior remain planned; the scaffold does not establish an application database.
+The application serves a loopback-only MCP endpoint with one read-only status tool. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and isolated PostgreSQL tests are implemented. Application migrations, workout behavior, authentication, and remote connectivity remain planned; the local MCP server does not connect to a database.
 
 - Prisma schema: `prisma/schema.prisma`
 - [Data model and remaining invariants](docs/data-model.md)
@@ -29,7 +29,34 @@ npm run check
 
 Run an individual stage with `npm run typecheck`, `npm run typecheck:test`, `npm run build`, or `npm test`. Tests use Node's test runner through `tsx`; add `*.test.ts` files under `tests/`. Test sources and `prisma.config.ts` are checked without emitting files, while the application build emits `src/` to ignored `dist/`.
 
-After building, `npm start` prints `Workout MCP is ready, Jonathan.` and exits. `npm run dev` watches the scaffold for changes. Neither command starts an MCP server yet.
+Run `npm run build` before standalone `npm test`: the server lifecycle tests exercise both source and compiled entry points. `npm run check` already builds before testing. Protocol tests use ephemeral loopback listeners and the official MCP client; they do not need PostgreSQL.
+
+## Local MCP server
+
+From Node 24 or `nix develop`, start the watch-mode development server:
+
+```sh
+MCP_PORT=3000 npm run dev
+```
+
+For the compiled entry point:
+
+```sh
+npm run build
+MCP_PORT=3000 npm start
+```
+
+Startup reports `Local MCP listening at http://127.0.0.1:3000/mcp`. `MCP_PORT` is required and accepts integers from `0` to `65535`; `0` requests an ephemeral port, reported in the startup URL. `MCP_HOST` defaults to `127.0.0.1`; empty or other values are rejected. Both commands load optional project-root `.env` configuration, with exported variables taking precedence. No database configuration is required by the server.
+
+Connect an MCP client using Streamable HTTP at the reported `/mcp` URL. The only tool is `server_status`, with no arguments (`{}`). It is read-only and returns text plus structured content containing only `status: "ok"`, `service: "workout-mcp"`, and the application version from `package.json`. The official-client tests verify the modern era with negotiated protocol version `2026-07-28`; see [protocol tests](tests/server/application.test.ts).
+
+The MCP v2 split packages are pinned to server/client **2.4.0**, Node adapter **2.1.2**, and Express adapter **2.0.2**, with Express **5.3.0** and Zod **4.6.7**. Exact dependencies remain in `package.json` and the lockfile.
+
+The SDK's Host/Origin protections reject non-local requests. Malformed requests, invalid arguments, unknown tools, and unsupported methods return structured failures without stack traces. This is a local developer transport: no authentication, workout tools, separate health endpoint, or remote/phone connection is provided.
+
+Press Ctrl-C (`SIGINT`) or send `SIGTERM` to stop. Shutdown closes MCP handling, in-flight HTTP connections, and the listener so the port can be reused. If startup fails, check the explicit port and loopback host first; select another port if it is already occupied. Startup errors intentionally omit configuration values and stack traces.
+
+For extension, `src/server/application.ts` constructs the unbound app and a fresh MCP server per request; it maintains no protocol session store. `src/server/listener.ts` owns binding and idempotent shutdown, while `src/index.ts` loads configuration and installs process signal handlers. Importing composition opens no listener and imports no database boundary. Keep new domain capabilities separate from this status-only transport and the [proposed architecture](docs/architecture.md).
 
 ## Prisma and database configuration
 
@@ -41,7 +68,7 @@ npm run prisma:validate
 npm run prisma:generate
 ```
 
-Generation writes the `prisma-client` output to ignored `src/generated/prisma/`. Application typechecking and builds regenerate it automatically; on a clean checkout, run generation before standalone `npm test` or `npm run typecheck:test`. Generated sources and build output are not committed. Formatting and structural validation do not approve the schema's business rules or apply it to PostgreSQL; see [remaining data-model invariants](docs/data-model.md).
+Generation writes the `prisma-client` output to ignored `src/generated/prisma/`. Application typechecking and builds regenerate it automatically; on a clean checkout, generate before standalone `npm run typecheck:test`, and build before standalone `npm test`. Generated sources and build output are not committed. Formatting and structural validation do not approve the schema's business rules or apply it to PostgreSQL; see [remaining data-model invariants](docs/data-model.md).
 
 Database operations require an explicitly supplied `DATABASE_URL` with PostgreSQL protocol, user, host, port, and database. Include a URL-encoded password when authentication requires it. Runtime entry points, Prisma CLI commands, and migration/lifecycle scripts load the optional project-root `.env` using Node 24's built-in loader. Exported variables take precedence, including an exported empty value; a missing file is harmless, while other loading errors produce a sanitized message.
 
@@ -73,7 +100,7 @@ npm run database:check
 
 The check connects, runs `SELECT 1`, and disconnects; it does not create tables, migrate, or start PostgreSQL. Success prints `Database connection succeeded.` Missing/malformed configuration is rejected before driver fallback; connection failures produce a sanitized message. Verify the selected database and transport are already reachable if the check fails. Independent read-only socket verification confirmed the database backend was released after disconnection.
 
-For application integration, import `createDatabase` from `src/database/index.ts`, construct it once with explicit configuration, and share its `client` rather than constructing a pool per request. Import and construction do not connect. Await `connect()` explicitly and await `disconnect()` during shutdown or in a `finally` block; shutdown disconnects Prisma and ends the pool. The readiness-greeting entry point does not invoke this boundary.
+For application integration, import `createDatabase` from `src/database/index.ts`, construct it once with explicit configuration, and share its `client` rather than constructing a pool per request. Import and construction do not connect. Await `connect()` explicitly and await `disconnect()` during shutdown or in a `finally` block; shutdown disconnects Prisma and ends the pool. The local MCP entry point does not invoke this boundary.
 
 ## Migration workflow
 
