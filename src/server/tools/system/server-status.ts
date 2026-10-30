@@ -1,10 +1,10 @@
-import type { McpServer } from "@modelcontextprotocol/server";
+import type { ToolRegistrar } from "../tool-registrar.js";
 import * as z from "zod/v4";
 
 const service = "workout-mcp";
 
-export function registerServerStatus(server: McpServer, version: string): void {
-    server.registerTool("server_status", {
+export function registerServerStatus(tools: ToolRegistrar, version: string): void {
+    tools.registerTool("server_status", {
         description: "Return the local server's status, service name, and application version.",
         inputSchema: z.object({}).strict(),
         outputSchema: z.object({
