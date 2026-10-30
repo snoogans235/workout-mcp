@@ -56,7 +56,7 @@ The SDK's Host/Origin protections reject non-local requests. Malformed requests,
 
 Press Ctrl-C (`SIGINT`) or send `SIGTERM` to stop. Shutdown closes MCP handling, in-flight HTTP connections, and the listener so the port can be reused. If startup fails, check the explicit port and loopback host first; select another port if it is already occupied. Startup errors intentionally omit configuration values and stack traces.
 
-For extension, `src/server/application.ts` constructs the unbound app and a fresh MCP server per request; it maintains no protocol session store. `src/server/listener.ts` owns binding and idempotent shutdown, while `src/index.ts` loads configuration and installs process signal handlers. Importing composition opens no listener and imports no database boundary. Keep new domain capabilities separate from this status-only transport and the [proposed architecture](docs/architecture.md).
+For extension, `src/server/application.ts` constructs the unbound app and delegates each request to the fresh-server factory in `src/server/create-server.ts`; it maintains no protocol session store. The factory calls `src/server/tools/register-tools.ts` for explicit registration. Each tool owns its schema, annotations, and handler in its own module, currently `src/server/tools/system/server-status.ts`. `src/server/listener.ts` owns binding and idempotent shutdown, while `src/index.ts` loads configuration and installs process signal handlers. Importing composition opens no listener and imports no database boundary. Keep new domain capabilities separate from this status-only transport and the [proposed architecture](docs/architecture.md).
 
 ## Prisma and database configuration
 
