@@ -1,6 +1,6 @@
 # Workout MCP architecture
 
-Status: agreed direction and proposed interfaces. The domain schema is written; runtime services and MCP tools are not implemented.
+Status: agreed direction and proposed domain interfaces. A local Express-hosted `/mcp` endpoint and read-only `server_status` tool are implemented; domain services, authentication, and remote connectivity remain planned. See [local server operation and composition](../README.md#local-mcp-server).
 
 ## Stack and request flow
 
@@ -57,7 +57,7 @@ If equipment is occupied, the agent selects an alternative using catalog attribu
 
 Choose supported ChatGPT connectivity and verify account availability. Implement authenticated user identity, private-data authorization, write validation, retry protection, and deployment/backups. Shared catalog curation rights and private custom entries need decisions before multi-user use.
 
-No HTTP endpoint or remote connection exists yet.
+The existing HTTP endpoint binds only to `127.0.0.1` and serves status metadata without a database connection. No remote connection exists yet.
 
 ## References
 

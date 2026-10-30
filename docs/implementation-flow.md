@@ -1,6 +1,6 @@
 # High-level implementation flow
 
-Status: proposed implementation design for the confirmed [user flow](user-flow.md). No server, agent runtime, database migration, or tools have been implemented.
+Status: proposed implementation design for the confirmed [user flow](user-flow.md). A [local MCP server](../README.md#local-mcp-server) with a read-only status tool exists; the domain flow, database migrations, and workout tools below remain unimplemented.
 
 [FigJam board](https://www.figma.com/board/qIflGPGcLYbqobCjAxmAIl) · [Editable implementation swimlane source](diagrams/implementation-flow.mmd)
 

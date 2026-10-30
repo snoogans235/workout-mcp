@@ -98,3 +98,5 @@ Use Bash for repository scripts. The declared development environment is in flak
 When changing Prisma configuration, generated-client handling, or database lifecycle, read [Prisma and database configuration](README.md#prisma-and-database-configuration) and the following migration workflow before editing.
 
 When changing integration-test database isolation, cleanup, or dump artifacts, read [PostgreSQL integration tests](README.md#postgresql-integration-tests) before editing.
+
+When changing MCP transport, tool composition, or listener lifecycle, read [Local MCP server](README.md#local-mcp-server) before editing.
