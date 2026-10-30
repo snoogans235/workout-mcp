@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/server";
+import { ToolRegistrar } from "./tools/tool-registrar.js";
 import { registerTools } from "./tools/register-tools.js";
 
 const metadata: unknown = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
@@ -11,6 +12,7 @@ const version = metadata.version;
 /** Construct a fresh server with the application's explicitly registered tools. */
 export function createServer() {
     const server = new McpServer({ name: "workout-mcp", version });
-    registerTools(server, version);
+    const tools = new ToolRegistrar(server);
+    registerTools(tools, version);
     return server;
 }

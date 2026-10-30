@@ -46,17 +46,43 @@ npm run build
 MCP_PORT=3000 npm start
 ```
 
-Startup reports `Local MCP listening at http://127.0.0.1:3000/mcp`. `MCP_PORT` is required and accepts integers from `0` to `65535`; `0` requests an ephemeral port, reported in the startup URL. `MCP_HOST` defaults to `127.0.0.1`; empty or other values are rejected. Both commands load optional project-root `.env` configuration, with exported variables taking precedence. No database configuration is required by the server.
+At the default log level, startup writes one newline-delimited JSON record to stdout:
 
-Connect an MCP client using Streamable HTTP at the reported `/mcp` URL. The only tool is `server_status`, with no arguments (`{}`). It is read-only and returns text plus structured content containing only `status: "ok"`, `service: "workout-mcp"`, and the application version from `package.json`. The official-client tests verify the modern era with negotiated protocol version `2026-07-28`; see [protocol tests](tests/server/application.test.ts).
+```json
+{"level":30,"event":"startup","component":"server","port":3000}
+```
+
+Connect at `http://127.0.0.1:3000/mcp`, using the record's selected port. `MCP_PORT` is required and accepts integers from `0` to `65535`; `0` requests an ephemeral port, reported in that record. `MCP_HOST` defaults to `127.0.0.1`; empty or other values are rejected. Both commands load optional project-root `.env` configuration, with exported variables taking precedence. No database configuration is required by the server.
+
+Connect an MCP client using Streamable HTTP at that `/mcp` URL. The only tool is `server_status`, with no arguments (`{}`). It is read-only and returns text plus structured content containing only `status: "ok"`, `service: "workout-mcp"`, and the application version from `package.json`. The official-client tests verify the modern era with negotiated protocol version `2026-07-28`; see [protocol tests](tests/server/application.test.ts).
 
 The MCP v2 split packages are pinned to server/client **2.4.0**, Node adapter **2.1.2**, and Express adapter **2.0.2**, with Express **5.3.0** and Zod **4.6.7**. Exact dependencies remain in `package.json` and the lockfile.
 
 The SDK's Host/Origin protections reject non-local requests. Malformed requests, invalid arguments, unknown tools, and unsupported methods return structured failures without stack traces. This is a local developer transport: no authentication, workout tools, separate health endpoint, or remote/phone connection is provided.
 
-Press Ctrl-C (`SIGINT`) or send `SIGTERM` to stop. Shutdown closes MCP handling, in-flight HTTP connections, and the listener so the port can be reused. If startup fails, check the explicit port and loopback host first; select another port if it is already occupied. Startup errors intentionally omit configuration values and stack traces.
+Press Ctrl-C (`SIGINT`) or send `SIGTERM` to stop. Shutdown closes MCP handling, in-flight HTTP connections, and the listener so the port can be reused, emits a `shutdown` event, and flushes diagnostics. If startup fails, check the explicit port, loopback host, and `LOG_LEVEL`; select another port if it is already occupied. The entry point writes a safe `startup_failed` JSON record to stderr and exits unsuccessfully. All startup failures currently use `CONFIGURATION_INVALID`, including an occupied port; the record omits configuration values and stack traces.
 
-For extension, `src/server/application.ts` constructs the unbound app and delegates each request to the fresh-server factory in `src/server/create-server.ts`; it maintains no protocol session store. The factory calls `src/server/tools/register-tools.ts` for explicit registration. Each tool owns its schema, annotations, and handler in its own module, currently `src/server/tools/system/server-status.ts`. `src/server/listener.ts` owns binding and idempotent shutdown, while `src/index.ts` loads configuration and installs process signal handlers. Importing composition opens no listener and imports no database boundary. Keep new domain capabilities separate from this status-only transport and the [proposed architecture](docs/architecture.md).
+For extension, `src/server/application.ts` constructs the unbound app and delegates each request to the fresh-server factory in `src/server/create-server.ts`; it maintains no protocol session store. The factory constructs one `ToolRegistrar` immediately after the SDK server and passes it to `src/server/tools/register-tools.ts`, returning the underlying server for transport and lifecycle handling. Registry functions receive the same `tools: ToolRegistrar` and forward it to tool modules. Each tool owns its schema, annotations, and plain handler, currently `src/server/tools/system/server-status.ts`. Register through `tools.registerTool(...)`: the registrar automatically guards synchronous and asynchronous failures while preserving SDK input inference, callback context, and schema validation. `src/server/listener.ts` owns binding and idempotent shutdown, while `src/index.ts` loads configuration and installs process signal handlers. Importing composition opens no listener and imports no database boundary. Keep new domain capabilities separate from this status-only transport and the [proposed architecture](docs/architecture.md).
+
+### Request diagnostics and safe errors
+
+`LOG_LEVEL` defaults to `info`. Accepted values are `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `silent`; empty, misspelled, or other values fail before binding. Events use Pino level `30` (info); failures use `50` (error). `warn` or `error` suppress startup, shutdown, and request-completion records while retaining failures; `fatal` and `silent` suppress both. For an ephemeral port, retain `info` or a more verbose level to see the selected port. Pino is exactly pinned to **10.4.0**.
+
+Each HTTP request reaching `/mcp` gets a fresh server-owned UUID in `X-Request-Id`; a supplied ID is replaced. Search JSON logs for that `requestId`. Request child loggers emit one `request_completed` or `request_failed` event with `component: "server"` and `durationMs`. These describe HTTP completion: a tool returning an MCP application error over successful HTTP also produces an `application_failed` record. SDK-owned malformed requests, invalid arguments, and unknown tools retain their protocol behavior.
+
+Application tool failures return `isError: true` with JSON text containing `code`, a safe `message`, `retryable`, and the same `requestId` as the header and failure log. The initial definitions are:
+
+| Code | Client guidance | Retryable |
+| --- | --- | --- |
+| `CONFIGURATION_INVALID` | Application configuration is invalid. | `false` |
+| `DEPENDENCY_UNAVAILABLE` | A required dependency is unavailable. Retry later. | `true` |
+| `INTERNAL_ERROR` | An internal error occurred. | `false` |
+
+For a known application failure, throw `new ApplicationError(ErrorDefinitions.DEPENDENCY_UNAVAILABLE, "database", { cause })`, choosing the appropriate definition and component. Frozen entries in `src/diagnostics/error-definitions.ts` own the code, message, retryability, and safe diagnostic cause; logger code/cause vocabularies derive from them. The shared registrar maps unexpected exceptions to the internal-error definition and lets SDK `ProtocolError` pass through to the SDK. Raw exception messages, stacks, and cause objects are excluded from diagnostics and client errors; logs carry only the safe cause category.
+
+`src/diagnostics/logger.ts` permits only validated event/component/code/cause values, UUIDs, booleans, selected port, and finite duration alongside Pino's numeric level. Arbitrary fields and nested objects are dropped before serialization, with additional credential-key redaction configured. Request/response objects, bodies, tool arguments/results, workout contents, credentials, tokens, and database URLs must remain outside this logging boundary. Debug/trace levels do not enable payload logging.
+
+For captured diagnostics, pass a destination stream to `createLogger(level, destination)` and inject that logger into `createApplication({ logger })` or `startServer(configuration, { logger })`. Await `application.close()` or `server.close()` so pending output flushes; the listener also flushes after its shutdown event. An injected destination remains caller-owned and is not closed by the logger. [Diagnostic tests](tests/server/diagnostics.test.ts) cover exact events and fields, level filtering, correlation under concurrency, privacy, and delayed output; [registrar tests](tests/server/tool-registrar.test.ts) cover automatic handler protection and SDK contracts.
 
 ## Prisma and database configuration
 

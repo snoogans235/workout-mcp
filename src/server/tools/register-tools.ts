@@ -1,6 +1,6 @@
-import type { McpServer } from "@modelcontextprotocol/server";
+import type { ToolRegistrar } from "./tool-registrar.js";
 import { registerServerStatus } from "./system/server-status.js";
 
-export function registerTools(server: McpServer, version: string): void {
-    registerServerStatus(server, version);
+export function registerTools(tools: ToolRegistrar, version: string): void {
+    registerServerStatus(tools, version);
 }

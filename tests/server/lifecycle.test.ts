@@ -17,9 +17,9 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
                 const deadline = setTimeout(() => { child.kill("SIGKILL"); reject(new Error("Server lifecycle check timed out.")); }, 5000);
                 child.stdout.on("data", chunk => {
                     stdout += chunk;
-                    const match = stdout.match(/Local MCP listening at (http:\/\/127\.0\.0\.1:\d+\/mcp)/);
+                    const match = stdout.match(/"port":(\d+)/);
                     if (match && !selected) {
-                        selected = new URL(match[1]);
+                        selected = new URL(`http://127.0.0.1:${match[1]}/mcp`);
                         const socket = connect(Number(selected.port), "127.0.0.1", () => {
                             socket.write("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n{", () => child.kill(signal));
                         });
@@ -61,6 +61,7 @@ test("invalid configuration and occupied ports fail without exposing values or s
         for (const entrypoint of [["--import", "tsx", "src/index.ts"], ["dist/index.js"]]) {
             for (const configuration of [
                 { MCP_HOST: "127.0.0.1", MCP_PORT: "private-configuration-sentinel" },
+                { MCP_HOST: "127.0.0.1", MCP_PORT: "0", LOG_LEVEL: "private-configuration-sentinel" },
                 { MCP_HOST: "0.0.0.0", MCP_PORT: "0" },
                 { MCP_HOST: "127.0.0.1", MCP_PORT: occupied.url.port },
             ]) {
@@ -69,7 +70,13 @@ test("invalid configuration and occupied ports fail without exposing values or s
                 });
                 assert.equal(result.status, 1);
                 assert.equal(result.stdout, "");
-                assert.match(result.stderr, /^Local MCP startup failed\./);
+                assert.deepEqual(JSON.parse(result.stderr), {
+                    level: 50,
+                    event: "startup_failed",
+                    component: "configuration",
+                    errorCode: "CONFIGURATION_INVALID",
+                    cause: "invalid_configuration",
+                });
                 assert.doesNotMatch(result.stderr, /private-configuration-sentinel|\/Users\/|node_modules|Error:|DATABASE_URL/);
             }
         }
