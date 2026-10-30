@@ -1,32 +1,12 @@
-import { readFileSync } from "node:fs";
 import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
+import { createMcpHandler } from "@modelcontextprotocol/server";
 import type { ErrorRequestHandler } from "express";
-import * as z from "zod/v4";
-
-const metadata: unknown = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
-if (!metadata || typeof metadata !== "object" || !("version" in metadata) || typeof metadata.version !== "string") {
-    throw new Error("Application version metadata is invalid.");
-}
-const version = metadata.version;
-const service = "workout-mcp";
+import { createServer } from "./create-server.js";
 
 /** Construct an unbound app; each MCP request receives its own server instance. */
 export function createApplication() {
-    const handler = createMcpHandler(() => {
-        const server = new McpServer({ name: service, version });
-        server.registerTool("server_status", {
-            description: "Return the local server's status, service name, and application version.",
-            inputSchema: z.object({}).strict(),
-            outputSchema: z.object({ status: z.literal("ok"), service: z.literal(service), version: z.string() }).strict(),
-            annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        }, async () => {
-            const status = { status: "ok" as const, service, version };
-            return { content: [{ type: "text", text: JSON.stringify(status) }], structuredContent: status };
-        });
-        return server;
-    });
+    const handler = createMcpHandler(() => createServer());
     const app = createMcpExpressApp({ host: "127.0.0.1" });
     app.disable("x-powered-by");
     const nodeHandler = toNodeHandler(handler);
