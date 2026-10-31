@@ -18,6 +18,8 @@ The separate [PostgreSQL integration command](../README.md#postgresql-integratio
 
 The [local MCP server](../README.md#local-mcp-server) exposes `/mcp` on loopback with a strict, read-only `server_status` tool. Official-client discovery/calls and process shutdown are verified; the server does not connect to PostgreSQL or implement the workout flow.
 
+The [generated MCP tool reference](tool-reference.md) is extracted from that local server's published metadata. Local generation and checking share the CI path; missing or stale reference content fails the check. See [reference maintenance](../README.md#generated-mcp-tool-reference) for commands and source-authoring guidance.
+
 ## Next implementation stages
 
 1. Review the schema assumptions in [data-model.md](data-model.md): catalog visibility, load semantics, one-location sessions, plan staleness boundaries, and measurement validators.
