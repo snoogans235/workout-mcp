@@ -22,13 +22,16 @@
     "migrate:status": "bash scripts/prisma-migrate.sh status",
     "migrate:deploy": "bash scripts/prisma-migrate.sh deploy",
     "database:check": "npm run prisma:generate && bash scripts/database-check.sh",
-    "test:integration": "npm run prisma:generate && bash scripts/test-integration.sh"
+    "test:integration": "npm run prisma:generate && bash scripts/test-integration.sh",
+    "docs:tools:generate": "bash scripts/tool-reference.sh generate",
+    "docs:tools:check": "bash scripts/tool-reference.sh check"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@cisco_open/mcptoolkit-contract": "2.0.5",
     "@modelcontextprotocol/client": "2.4.0",
     "@types/express": "5.0.6",
     "@types/node": "^24.19.2",
