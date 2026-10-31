@@ -19,6 +19,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npm run docs:tools:check
   integration:
     runs-on: ubuntu-latest
     # Matching client/server majors also make custom dump validation reproducible.

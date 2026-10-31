@@ -100,3 +100,5 @@ When changing Prisma configuration, generated-client handling, or database lifec
 When changing integration-test database isolation, cleanup, or dump artifacts, read [PostgreSQL integration tests](README.md#postgresql-integration-tests) before editing.
 
 When changing MCP transport, tool composition, logging, application errors, or listener lifecycle, read [Local MCP server](README.md#local-mcp-server) before editing. Tool registries receive the shared `ToolRegistrar` constructed in `createServer`; register plain handlers through it so error handling remains automatic. Keep public error metadata in `ErrorDefinitions`.
+
+When changing published tool metadata or reference generation, read [Generated MCP tool reference](README.md#generated-mcp-tool-reference). Author descriptions, schemas, and annotations in tool modules, then regenerate `docs/tool-reference.md`; do not edit the generated reference by hand. Run `npm run docs:tools:check` alongside the aggregate check for tool changes.

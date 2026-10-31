@@ -3,6 +3,8 @@
 Canonical documentation for `/Users/jnewton/Projects/typescript/workout_mcp`.
 
 - [Development setup and automated checks](../README.md#development-and-checks)
+- [Generate and check the MCP tool reference](../README.md#generated-mcp-tool-reference)
+- [Generated MCP tool reference](tool-reference.md)
 - [Local MCP server](../README.md#local-mcp-server)
 - [Prisma configuration and migration commands](../README.md#prisma-and-database-configuration)
 - [PostgreSQL integration tests and artifacts](../README.md#postgresql-integration-tests)

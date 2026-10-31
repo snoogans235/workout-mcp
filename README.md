@@ -31,6 +31,23 @@ Run an individual stage with `npm run typecheck`, `npm run typecheck:test`, `npm
 
 Run `npm run build` before standalone `npm test`: the server lifecycle tests exercise both source and compiled entry points. `npm run check` already builds before testing. Protocol tests use ephemeral loopback listeners and the official MCP client; they do not need PostgreSQL.
 
+### Generated MCP tool reference
+
+After `npm ci`, generate or verify the [tool reference](docs/tool-reference.md):
+
+```sh
+npm run docs:tools:generate
+npm run docs:tools:check
+```
+
+Generation writes `docs/tool-reference.md`; checking leaves it unchanged and prints `Tool reference is current.` when it matches. GitHub Actions runs the same check after `npm run check` for pull requests and pushes to `main`. It is a separate local command, so run both checks before submitting tool changes.
+
+Author tool descriptions, parameter descriptions, annotations, and schemas in the tool modules registered through `src/server/tools/register-tools.ts`. Regenerate the reference after changing that metadata and commit the generated change with its source. Generation extracts published metadata; it does not supply meaningful prose. The pinned `@cisco_open/mcptoolkit-contract` **2.0.5** CLI extracts mcpdesc **0.8.0** using protocol **2026-07-28**, validates it strictly, and renders its reference-documentation template. An automatically extracted schema/annotation appendix covers fields omitted by that template.
+
+Both commands build and start their own loopback server with an ephemeral port. They need no database, credentials, separately running server, or LLM. To select a port, use `TOOL_REFERENCE_PORT=3001 npm run docs:tools:check`; choose an unused port. The runner removes temporary `workout-tool-reference.*` files under `TMPDIR` (or `/tmp`) and stops its owned process tree on success, failure, `SIGINT`, or `SIGTERM`. Each build/extraction/rendering step has a 120-second timeout, and server readiness polling is bounded.
+
+A missing or stale reference fails with regeneration guidance and, for stale content, a diff. Review the source change, regenerate, and check again. Startup, extraction, validation, or rendering failures also exit nonzero: fix the reported stage before regenerating. For an occupied explicit port, select another port or omit `TOOL_REFERENCE_PORT`; the runner preserves the existing listener.
+
 ## Local MCP server
 
 From Node 24 or `nix develop`, start the watch-mode development server:
