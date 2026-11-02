@@ -32,7 +32,13 @@ async function withAdmin(action: (client: Client) => Promise<void>): Promise<voi
 }
 
 async function child(command: string, args: string[], url: string): Promise<number> {
-    const env: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: url };
+    const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        DATABASE_URL: url,
+        // Tests may observe pg_stat_activity without opening a target session
+        // that would race the loader's stopped-application preflight.
+        TEST_DATABASE_MONITOR_DATABASE: decodeURIComponent(new URL(requireAdminUrl(process.env.TEST_DATABASE_ADMIN_URL)).pathname.slice(1)),
+    };
     delete env.TEST_DATABASE_ADMIN_URL;
     delete env.TEST_DB_RUN_OWNER;
     // Buffer output so secrets split across chunks cannot evade replacement.
@@ -103,7 +109,7 @@ async function main(): Promise<void> {
         } else console.log("No reviewed migrations checked in; this run proves connection, transaction, and isolation behavior only.");
         const files = readdirSync(join(root, "tests/integration")).filter(file => file.endsWith(".integration.ts")).sort();
         if (!files.length) throw new Error("No integration tests found.");
-        process.exitCode = await child(process.execPath, ["--import", "tsx", "--test", ...files.map(file => `tests/integration/${file}`)], url);
+        process.exitCode = await child(process.execPath, ["--import", "tsx", "--test", "--test-concurrency=1", ...files.map(file => `tests/integration/${file}`)], url);
     } else if (operation === "artifact") {
         if (!artifactRequired(mode, Number(status))) return;
         await withAdmin(async client => { if (!await owned(client)) throw new Error("Generated database is missing."); });
