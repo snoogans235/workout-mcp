@@ -16,6 +16,8 @@ Prisma 7.10.1 packages, configuration, ignored client generation, migration comm
 
 The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique test database per invocation, verifies transaction rollback/isolation, and optionally retains validated local test dumps. The migration set is empty, so these checks do not prove domain-schema behavior. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
 
+The [local database loader](../README.md#local-database-replacement) atomically replaces a deliberately selected local `public` schema and data from a supplied full PostgreSQL 18 custom archive. It creates no backup/export and runs no migrations. Isolated synthetic tests verify replacement, repeat loading, fidelity, and failure/interruption rollback; loading does not establish application-schema compatibility, and non-superuser execution remains unverified.
+
 The [local MCP server](../README.md#local-mcp-server) exposes `/mcp` on loopback with a strict, read-only `server_status` tool. Official-client discovery/calls and process shutdown are verified; the server does not connect to PostgreSQL or implement the workout flow.
 
 The [generated MCP tool reference](tool-reference.md) is extracted from that local server's published metadata. Local generation and checking share the CI path; missing or stale reference content fails the check. See [reference maintenance](../README.md#generated-mcp-tool-reference) for commands and source-authoring guidance.

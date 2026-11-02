@@ -7,6 +7,7 @@ Canonical documentation for `/Users/jnewton/Projects/typescript/workout_mcp`.
 - [Generated MCP tool reference](tool-reference.md)
 - [Local MCP server](../README.md#local-mcp-server)
 - [Prisma configuration and migration commands](../README.md#prisma-and-database-configuration)
+- [Load a supplied local database archive](../README.md#local-database-replacement)
 - [PostgreSQL integration tests and artifacts](../README.md#postgresql-integration-tests)
 - [Confirmed adaptive workout user flow](user-flow.md)
 - [High-level implementation swimlane](implementation-flow.md)
