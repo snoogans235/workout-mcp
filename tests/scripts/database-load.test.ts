@@ -12,6 +12,7 @@ test("database load requires a dedicated exact local non-maintenance target", ()
 test("database load rejects invalid destinations and ambiguous arguments", () => {
     const args = ["--file", "fixture.dump", "--target", "workouts"];
     for (const url of [undefined, "", "postgresql://loader@remote:55432/workouts",
+        "postgresql://loader@postgres:5432/workouts",
         "postgresql://loader@127.0.0.1:55432/other", "postgresql://loader@127.0.0.1/workouts",
         "postgresql://loader@127.0.0.1:55432/workouts?service=ambient"]) {
         assert.throws(() => loadConfiguration(args, url));
