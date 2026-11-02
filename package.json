@@ -24,7 +24,8 @@
     "database:check": "npm run prisma:generate && bash scripts/database-check.sh",
     "test:integration": "npm run prisma:generate && bash scripts/test-integration.sh",
     "docs:tools:generate": "bash scripts/tool-reference.sh generate",
-    "docs:tools:check": "bash scripts/tool-reference.sh check"
+    "docs:tools:check": "bash scripts/tool-reference.sh check",
+    "database:load": "node --import tsx scripts/database-load.ts"
   },
   "keywords": [],
   "author": "",

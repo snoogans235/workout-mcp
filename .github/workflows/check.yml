@@ -24,23 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     # Matching client/server majors also make custom dump validation reproducible.
     container: postgres:18
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       TEST_DB_ARTIFACT: "off"
     steps:
       - name: Configure masked test administrative connection
         shell: bash
         env:
-          TEST_DB_HOST: postgres
+          TEST_DB_HOST: 127.0.0.1
           TEST_DB_PORT: "5432"
           TEST_DB_ROLE: postgres
           TEST_DB_DATABASE: postgres
@@ -54,4 +44,33 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test:integration
+      - name: Run integration tests with owned loopback PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          cluster_root="$(mktemp -d /tmp/workout-ci-postgres.XXXXXXXX)"
+          cleanup() {
+            result=$?
+            trap - EXIT INT TERM
+            if [[ ! "$cluster_root" =~ ^/tmp/workout-ci-postgres\.[A-Za-z0-9]{8}$ ]]; then
+              echo 'Refusing an unexpected CI PostgreSQL cleanup path.' >&2
+              exit 1
+            fi
+            if [[ -f "$cluster_root/data/postmaster.pid" ]]; then
+              if ! gosu postgres pg_ctl --pgdata "$cluster_root/data" --mode fast --wait --timeout 30 stop; then
+                echo 'Owned CI PostgreSQL shutdown failed.' >&2
+                exit 1
+              fi
+            fi
+            rm -rf -- "$cluster_root"
+            exit "$result"
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          chown postgres:postgres "$cluster_root"
+          install -d -o postgres -g postgres -m 700 "$cluster_root/socket"
+          gosu postgres initdb --pgdata "$cluster_root/data" --auth-local trust --auth-host trust --no-locale --encoding UTF8
+          gosu postgres pg_ctl --pgdata "$cluster_root/data" --log "$cluster_root/server.log" \
+            --options "-h 127.0.0.1 -p 5432 -k $cluster_root/socket" --wait --timeout 30 start
+          npm run test:integration

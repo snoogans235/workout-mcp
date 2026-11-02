@@ -156,7 +156,33 @@ The domain schema is a review draft. No initial migration has been created or ap
 | `npm run migrate:dev` | Create/apply development migrations after review in an appropriate development environment. |
 | `npm run migrate:deploy` | Apply already committed migrations in a deployment environment. |
 
-All migration commands validate `DATABASE_URL` before invoking Prisma. Development migration commands use Prisma's shadow-database workflow and can require database creation privileges; `--create-only` is not a general read-only database check. Select the target and required permissions deliberately. No migration command is part of `npm run check`, and no reset or seed workflow is provided here.
+All migration commands validate `DATABASE_URL` before invoking Prisma. Development migration commands use Prisma's shadow-database workflow and can require database creation privileges; `--create-only` is not a general read-only database check. Select the target and required permissions deliberately. No migration command is part of `npm run check`. Loading a supplied dataset is a separate [local database replacement workflow](#local-database-replacement).
+
+## Local database replacement
+
+Use a supplied, trusted **full PostgreSQL 18 custom-format archive** to restore a local dataset or load curated seed data. This replaces the target's entire `public` schema and data, including target-only objects absent from the archive. Stop the local application and other database clients first. Loading creates no backup or export; retain any existing data you need separately before proceeding.
+
+Use Node 24, installed project dependencies, PostgreSQL 18 `pg_restore` and `psql` on `PATH`, and an already-running PostgreSQL 18 server. The target database must already exist. Its role needs permission to connect, inspect the guarded catalogs, drop the existing `public` schema and its objects, recreate that schema, and create/load the archived objects. The loader does not create roles or change authentication. Verification used the selected local superuser login; execution with a non-superuser role has not been verified.
+
+Set a dedicated `DATABASE_LOAD_URL` in ignored `.env` or the invoking environment. Replace these illustrative names with the deliberately selected local role, port, and database:
+
+```dotenv
+DATABASE_LOAD_URL=postgresql://example_role@127.0.0.1:55432/example_local_database
+```
+
+Only explicit loopback TCP or an absolute Unix-socket directory is accepted. For a socket, use the [documented URL shape](#prisma-and-database-configuration) with `DATABASE_LOAD_URL` as the variable name. The loader never falls back to `DATABASE_URL`, `TEST_DATABASE_ADMIN_URL`, or ambient PostgreSQL connection settings. Maintenance/template databases are refused. Supply the exact database name again as confirmation:
+
+```sh
+npm run database:load -- --file /absolute/path/dataset.dump --target example_local_database
+```
+
+The archive must be a readable regular file, not a symlink. Both archive producer and source database must be PostgreSQL 18. Supported application objects belong to `public`. Plain SQL and archives missing application schema or matching `TABLE DATA` entries for their tables are rejected; this includes table-schema-only, partial table-data, and partition-parent-only archive shapes. Multi-schema and extension-dependent application datasets are unsupported; the normal built-in `plpgsql` installation is allowed. Targets with unsupported namespaces, extensions, or other guarded objects also fail before reset. Only use archives you trust: restoring their schema executes supplied SQL, and archive validation is not a sandbox.
+
+The npm command invokes `scripts/database-load.ts` directly. It privately snapshots the supplied archive, validates its contents, and renders restore SQL without source ownership, ACLs, or tablespace placement. Static guards/reset SQL in `scripts/database-load/reset.sql` and the rendered restoration run in one `psql --single-transaction` connection. The static file contains no application table definitions; those come from the archive. The target database and its ownership remain intact, while the restored identifiers, relationships, JSON values, sequence state, and migration records come from the archive. No Prisma migrations run automatically.
+
+Success prints `Local database replacement committed successfully.` only after commit. A failed load returns nonzero; failure during replacement rolls back to the prior committed schema and data. `SIGINT` and `SIGTERM` return 130 and 143 after owned restore connection closure/rollback. The loader removes its temporary files and manages only its own subprocesses; it does not terminate other clients to force replacement or modify the supplied archive.
+
+Failures report fixed guidance and a PostgreSQL SQLSTATE when available, without connection values, SQL, or row contents. Check the exact local target, archive format/version, permissions, and stopped-client requirement before retrying. An occupied target fails without disconnecting its existing clients. Successful loading establishes the supplied schema and data; it does not prove compatibility with the current application revision or provide production backup/recovery guarantees.
 
 ## PostgreSQL integration tests
 
