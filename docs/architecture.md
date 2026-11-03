@@ -23,7 +23,7 @@ The database preserves facts and durable prescriptions. Agent assessments of sti
 
 ## Planned OAuth contract
 
-[WOR-14](https://gnym.youtrack.cloud/issue/WOR-14) selects Auth0 as the managed authorization server, ChatGPT as the OAuth client, and Workout MCP as the protected resource server. Authentication remains planned: the current server neither validates tokens nor resolves users. The OAuth values in [`.env.example`](../.env.example) are public development configuration. Copying them into `.env` loads them into the environment, but current server code does not consume them for authentication.
+[WOR-14](https://gnym.youtrack.cloud/issue/WOR-14) selects Auth0 as the managed authorization server, ChatGPT as the OAuth client, and Workout MCP as the protected resource server. Authentication remains planned: the current server neither validates tokens nor resolves users. [`.env.example`](../.env.example) declares the OAuth variable names; fill their values for your environment in `.env`. The file is loaded into the environment, but current server code does not consume these values for authentication.
 
 ### Resource and discovery
 
