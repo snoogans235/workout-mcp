@@ -84,9 +84,23 @@ model User {
   createdAt           DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
 
+  externalIdentity ExternalIdentity?
+
   trainingPlans   TrainingPlan[]
   plannedSessions PlannedSession[]
   workouts        Workout[]
+}
+
+// One external identity per application user; account linking is not implemented.
+model ExternalIdentity {
+  issuer    String
+  subject   String
+  userId    String   @unique @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([issuer, subject])
 }
 
 model Location {

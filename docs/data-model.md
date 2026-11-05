@@ -1,6 +1,6 @@
 # Workout MCP data model
 
-Status: executable Prisma schema draft based on the design discussion. No database has been created or migrated.
+Status: User/external-identity persistence and its identity-only migration are implemented and tested in isolated PostgreSQL databases. Catalog, planning, and history models remain executable Prisma design drafts without migrations. Developer database migration state is environment-specific.
 
 - Schema: `../prisma/schema.prisma`
 - [Editable FigJam board](https://www.figma.com/board/qIflGPGcLYbqobCjAxmAIl)
@@ -17,6 +17,7 @@ Measurement type belongs to Exercise, not WorkoutSet. Set measurements live in J
 | Area | Model | Responsibility |
 | --- | --- | --- |
 | Identity | User | Workout owner, timezone, and preferred weight unit |
+| Identity | ExternalIdentity | Unique verified issuer/subject mapped to one application user |
 | Catalog | Exercise | Specific variant, measurement type, movement pattern, optional equipment model |
 | Catalog | EquipmentModel | Manufacturer, model name, and equipment category |
 | Catalog | EquipmentInstance | Actual piece of equipment, location, label, and notes |
@@ -31,7 +32,16 @@ Measurement type belongs to Exercise, not WorkoutSet. Set measurements live in J
 | History | WorkoutExercise | Actual exercise/machine, order, optional planned origin and substitution reason |
 | History | WorkoutSet | Actual JSONB measurements, effort, notes, and optional planned-set link |
 
-UUID primary keys identify records. Array order is persisted using position fields, unique within each parent. The same exercise may appear multiple times in one workout.
+UUID primary keys identify domain records; external identities use the issuer/subject composite key. Array order is persisted using position fields, unique within each parent. The same exercise may appear multiple times in one workout.
+
+## Users and external identities
+
+The initial migration creates only `WeightUnit`, `User`, and `ExternalIdentity`. Existing private-domain relationships remain declared in Prisma for future migrations. `User` requires a display name and timezone; its preferred weight unit defaults to `LB`.
+
+`ExternalIdentity` uses the exact `(issuer, subject)` pair as its primary key. Values must be nonblank; issuer trailing slashes and subject case are preserved. Its unique `userId` permits one external identity per user. The foreign key restricts user deletion and primary-key updates while an identity refers to it. Account linking and provider replacement require a separate reviewed design.
+
+`resolveUser` in `src/identity/users.ts` accepts an already verified issuer/subject pair. The caller must validate the access token before calling it; token validation and HTTP integration remain planned. On first resolution, the caller supplies a separate initial profile containing a nonempty `displayName`, a valid `timezone`, and optional `preferredWeightUnit` (`LB` or `KG`). The profile cannot contain email or an owner ID. Nested creation atomically creates both rows; a concurrent unique-key loser resolves the winning mapping without leaving an orphan user. Returning identities keep their existing profile and preferences. Different keys create different users even if their profiles match.
+
 
 ## Catalog and equipment
 
@@ -134,9 +144,9 @@ Training-plan acceptance and progression behavior remain agent/service policies.
 
 ## Verification and status
 
-Prisma 7.10.1 format and validate passed for the saved schema, which declares 14 models and 9 enums. A database-free migration-diff command exited successfully but produced no SQL; SQL generation is therefore unverified. Structural validation does not verify business behavior or apply anything to PostgreSQL.
+Prisma 7.10.1 formatting and structural validation pass for the schema. The reviewed identity migration is applied and tested in fresh isolated PostgreSQL databases, including exact-key lookup, concurrency, rollback, restrictive relationships, preference preservation. Structural validation alone does not verify the remaining domain invariants.
 
-Prisma 7.10.1 dependencies and configuration are now installed in this project, and the application client is generated into ignored output. Database-free format, validation, generation, typechecks, and tests pass. Read-only Unix-socket verification confirms connection, disconnection, and backend resource release against an existing database. No application migration has been created or applied. The [local MCP server](../README.md#local-mcp-server) exposes status metadata only and does not use this persistence boundary. See [Prisma configuration and migration workflow](../README.md#prisma-and-database-configuration).
+The application client is generated into ignored output. Database-free typechecks, compilation, and tests pass. The [local MCP server](../README.md#local-mcp-server) exposes status metadata only and does not use identity persistence. Normal developer database migration state is not established by these tests; see the [migration workflow](../README.md#migration-workflow) and [integration test boundary](../README.md#postgresql-integration-tests).
 
 [Prisma 7 schema reference](https://www.prisma.io/docs/orm/v7/reference/prisma-schema-reference)
 

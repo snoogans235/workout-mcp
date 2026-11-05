@@ -5,7 +5,7 @@
 - Stack chosen: TypeScript, Node.js, Express, PostgreSQL, Prisma.
 - Domain schema written in `../prisma/schema.prisma`.
 - Prisma 7.10.1 formatting and structural validation passed.
-- Database-free SQL preview produced no output; SQL generation is unverified. No SQL was applied.
+- The identity-only SQL migration is verified in isolated PostgreSQL databases; remaining domain models await reviewed migrations.
 - FigJam original draft replaced by catalog, planning, and workout-history diagrams.
 
 ## Implemented development foundation
@@ -14,7 +14,7 @@ The repository contains a Node/TypeScript scaffold, a readiness-greeting unit te
 
 Prisma 7.10.1 packages, configuration, ignored client generation, migration commands, and an explicit reusable client/pool boundary are implemented. Database-free verification and read-only connection, disconnection, and resource release against an existing database through a Unix socket pass. See [Prisma configuration](../README.md#prisma-and-database-configuration).
 
-The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique test database per invocation, verifies transaction rollback/isolation, and optionally retains validated local test dumps. The migration set is empty, so these checks do not prove domain-schema behavior. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
+The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique migrated test database per file, verifies identity persistence and transaction rollback/isolation, and optionally retains validated local test dumps. Only the identity tables and weight-unit enum are migrated. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
 
 The [local database loader](../README.md#local-database-replacement) atomically replaces a deliberately selected local `public` schema and data from a supplied full PostgreSQL 18 custom archive. It creates no backup/export and runs no migrations. Isolated synthetic tests verify replacement, repeat loading, fidelity, and failure/interruption rollback; loading does not establish application-schema compatibility, and non-superuser execution remains unverified.
 
@@ -25,7 +25,7 @@ The [generated MCP tool reference](tool-reference.md) is extracted from that loc
 ## Next implementation stages
 
 1. Review the schema assumptions in [data-model.md](data-model.md): catalog visibility, load semantics, one-location sessions, plan staleness boundaries, and measurement validators.
-2. Review and create the initial domain migration with required CHECK constraints/triggers. The schema draft has not been applied to an application database.
+2. Review and create the remaining domain migrations with required CHECK constraints/triggers. Catalog, planning, and history models remain unmigrated drafts.
 3. Implement the catalog and equipment queries. Verify exact exercise/machine histories can be distinguished and catalog definitions cannot be deleted out from under records.
 4. Implement runtime measurement validation and performed workout persistence. Verify atomic writes, units, ownership, ordering, corrections, and durability after restart.
 5. Implement durable plans, planned sessions/targets, plan snapshots, and stale-session replacement. Test expiry boundaries and concurrent updates.
@@ -44,7 +44,7 @@ The [generated MCP tool reference](tool-reference.md) is extracted from that loc
 - Reject cross-user plan links and mismatched planned-exercise/set links.
 - Retry a write without duplicating rows and reject stale corrections.
 
-No application migrations or workout business-behavior tests exist yet.
+Identity persistence is implemented and tested; workout business-behavior tests remain future work.
 
 
 ## Adaptive workout interaction

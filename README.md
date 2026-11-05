@@ -6,7 +6,7 @@ Selected stack: TypeScript, Node.js, Express, PostgreSQL, and Prisma. Local deve
 
 ## Current status
 
-The application serves a loopback-only MCP endpoint with one read-only status tool. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and isolated PostgreSQL tests are implemented. Application migrations, workout behavior, authentication, and remote connectivity remain planned; the local MCP server does not connect to a database.
+The application serves a loopback-only MCP endpoint with one read-only status tool. Automated project checks, Prisma client generation, an explicit database lifecycle boundary, and isolated PostgreSQL tests are implemented. User/external-identity persistence and an identity-only migration are implemented and tested in isolated databases. Workout behavior, authentication, and remote connectivity remain planned; the local MCP server does not connect to a database.
 
 - Prisma schema: `prisma/schema.prisma`
 - [Data model and remaining invariants](docs/data-model.md)
@@ -147,14 +147,14 @@ For application integration, import `createDatabase` from `src/database/index.ts
 
 ## Migration workflow
 
-The domain schema is a review draft. No initial migration has been created or applied, and its remaining constraints must be reviewed before application. The following commands are available for later authorized migration work; do not use them to apply the current draft to a normal developer database.
+The reviewed initial migration creates only `WeightUnit`, `User`, and `ExternalIdentity`. Its application is verified in isolated PostgreSQL tests; this does not establish migration state in your developer database. Catalog, planning, and history models remain unmigrated design drafts with [outstanding invariants](docs/data-model.md#integrity-boundaries). Use `migrate:deploy` for the reviewed migration set. Generating a migration from the entire current Prisma schema would also include those draft models and requires a separate review.
 
 | Command | Purpose |
 | --- | --- |
 | `npm run migrate:status` | Inspect migration status for the explicitly configured database. |
 | `npm run migrate:create -- --name NAME` | Use development migration tooling with `--create-only`, then review generated SQL under `prisma/migrations`. |
 | `npm run migrate:dev` | Create/apply development migrations after review in an appropriate development environment. |
-| `npm run migrate:deploy` | Apply already committed migrations in a deployment environment. |
+| `npm run migrate:deploy` | Apply the reviewed migration files to the explicitly selected database. |
 
 All migration commands validate `DATABASE_URL` before invoking Prisma. Development migration commands use Prisma's shadow-database workflow and can require database creation privileges; `--create-only` is not a general read-only database check. Select the target and required permissions deliberately. No migration command is part of `npm run check`. Loading a supplied dataset is a separate [local database replacement workflow](#local-database-replacement).
 
@@ -200,9 +200,9 @@ Run:
 npm run test:integration
 ```
 
-Each invocation creates its own `workout_mcp_test_<32 hexadecimal characters>` database and ownership marker, applies checked-in migrations with `migrate deploy`, and runs `tests/integration/*.integration.ts` through the Node test runner. Add database-backed scenarios there; ordinary `*.test.ts` tests remain part of the database-free `npm run check`.
+Each invocation runs `tests/integration/*.integration.ts` sequentially through the Node test runner. Each file receives its own fresh `workout_mcp_test_<32 hexadecimal characters>` database and ownership marker, with reviewed migrations applied through `migrate deploy`. This isolates schema-replacement fixtures from other persistence tests. Add database-backed scenarios there; ordinary `*.test.ts` tests remain part of the database-free `npm run check`.
 
-There are currently no checked-in migrations. The runner reports that explicitly; the existing integration scenario proves fresh-database isolation and transaction rollback, not domain-schema behavior. Concurrent invocations use different databases. Application clients close before cleanup; the runner reaps subprocesses and drops only its generated, owned database on success, failure, `INT`, or `TERM`.
+The identity migration and persistence scenarios verify first/repeated/concurrent identity resolution, exact issuer/subject keys, uniqueness and rollback, restrictive relationships, preference preservation. Catalog, planning, and history persistence remain unverified. Concurrent invocations use different databases. Application clients close before cleanup; the runner reaps subprocesses and drops only its generated, owned database on success, failure, `INT`, or `TERM`.
 
 If cleanup fails, the command exits nonzero and reports the generated database name. Give that exact name and run context to a maintainer for targeted inspection; do not reset the development database or delete every database matching a prefix. `SIGKILL`, machine shutdown, and loss of administrative access can prevent cleanup. For an initial configuration failure, check the explicit admin URL, PostgreSQL major version, and role privileges before retrying.
 
@@ -220,7 +220,7 @@ Artifacts are optional. Select a mode in the invoking environment:
 TEST_DB_ARTIFACT=on-failure npm run test:integration
 ```
 
-Artifact modes require PostgreSQL 18 `pg_dump` and `pg_restore` on `PATH`; the Nix environment supplies them. Before database cleanup, the runner dumps only its generated test database in custom format and validates it with `pg_restore --list`. Validated dumps stay under ignored `.local/test-artifacts/`, with directory mode `0700` and file mode `0600`. Existing artifact paths and symlinks are rejected. Dump or validation errors are reported, make the run fail, and still invoke database cleanup.
+Artifact modes require PostgreSQL 18 `pg_dump` and `pg_restore` on `PATH`; the Nix environment supplies them. Before each file's database cleanup, the runner dumps only that generated test database in custom format and validates it with `pg_restore --list`. Validated dumps stay under ignored `.local/test-artifacts/`, with directory mode `0700` and file mode `0600`. Existing artifact paths and symlinks are rejected. Dump or validation errors are reported, make the run fail, and still invoke database cleanup.
 
 Custom archives can retain owner role metadata. Any later `pg_restore` operation must use `--no-owner --no-acl`; `pg_dump --no-owner` alone does not suppress ownership restoration for custom format. These test artifacts are not a production backup/restore workflow. Keep fixtures synthetic and free of credentials or development/production data; artifact names and runner output do not contain connection URLs or passwords.
 
