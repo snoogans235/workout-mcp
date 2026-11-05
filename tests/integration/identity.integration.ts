@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { test } from "node:test";
 import { createDatabase } from "../../src/database/index.js";
-import { resolveUser } from "../../src/identity/users.js";
+import { bootstrapLocalUser, LOCAL_USER_ID, resolveUser } from "../../src/identity/users.js";
 import { requireTestDatabaseName } from "../../scripts/integration/config.js";
 
 const profile = { displayName: "Test user", timezone: "America/Indiana/Indianapolis" };
@@ -57,6 +59,20 @@ test("identity migration and persistence preserve unique owners and atomic creat
         await assert.rejects(resolveUser(client, { ...identity, subject: "bad-zone" }, { ...profile, timezone: "invalid/timezone" }), /Initial user profile/);
         assert.equal(await client.user.count(), 4);
 
+        const environment = { ...process.env };
+        delete environment.LOCAL_USER_DISPLAY_NAME;
+        delete environment.LOCAL_USER_TIMEZONE;
+        const command = await promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/bootstrap-local-user.ts"], { env: environment });
+        assert.match(command.stdout, /Local bootstrap user is available/);
+        const local = await bootstrapLocalUser(client, { displayName: "local", timezone: profile.timezone });
+        assert.equal(local.displayName, "local");
+        assert.equal(local.timezone, profile.timezone);
+        assert.equal(local.id, LOCAL_USER_ID);
+        assert.equal(local.preferredWeightUnit, "LB");
+        assert.deepEqual(await bootstrapLocalUser(client, { displayName: "changed", timezone: "UTC" }), local);
+        assert.equal(await client.externalIdentity.count({ where: { userId: local.id } }), 0);
+        assert.equal(await client.user.count(), 5);
+        assert.notEqual(local.id, first.id, "bootstrap user is never selected by a verified external identity");
     } finally {
         await database.disconnect();
     }

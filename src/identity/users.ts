@@ -19,6 +19,9 @@ const profileSchema = z.strictObject({
 export type VerifiedIdentity = z.infer<typeof identitySchema>;
 export type InitialUserProfile = z.infer<typeof profileSchema>;
 
+/** Stable local bootstrap identifier; it carries no authentication authority. */
+export const LOCAL_USER_ID = "00000000-0000-4000-8000-000000000001";
+
 function parseIdentity(input: VerifiedIdentity): VerifiedIdentity {
     const result = identitySchema.safeParse(input);
     if (!result.success) {
@@ -63,4 +66,13 @@ export async function resolveUser(client: PrismaClient, identity: VerifiedIdenti
         // Do not expose persisted identity values through driver error messages.
         throw new Error("Identity persistence failed.");
     }
+}
+
+/** Explicit opt-in seed, separate from authenticated identity resolution. Never links a provider. */
+export async function bootstrapLocalUser(client: PrismaClient, profile: InitialUserProfile) {
+    return client.user.upsert({
+        where: { id: LOCAL_USER_ID },
+        create: { id: LOCAL_USER_ID, ...parseProfile(profile) },
+        update: {},
+    });
 }

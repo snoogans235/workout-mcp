@@ -65,7 +65,7 @@ WOR-15 owns persisted identities; WOR-16 owns metadata, token validation, and au
 
 ## Implemented identity persistence
 
-`src/identity/users.ts` resolves an already verified issuer/subject pair to an application user through the shared Prisma client. It performs atomic first-user creation with explicit initial profile data and preserves returning-user preferences. It does not verify tokens or run from the current MCP request path. See the [identity persistence contract](data-model.md#users-and-external-identities).
+`src/identity/users.ts` resolves an already verified issuer/subject pair to an application user through the shared Prisma client. It performs atomic first-user creation with explicit initial profile data and preserves returning-user preferences. It does not verify tokens or run from the current MCP request path. See the [identity persistence contract](data-model.md#users-and-external-identities) and [explicit local bootstrap](../README.md#local-bootstrap-user). The bootstrap user remains unlinked; authentication never falls back to it.
 
 ## Domain schema
 

@@ -44,7 +44,7 @@ The [generated MCP tool reference](tool-reference.md) is extracted from that loc
 - Reject cross-user plan links and mismatched planned-exercise/set links.
 - Retry a write without duplicating rows and reject stale corrections.
 
-Identity persistence is implemented and tested; workout business-behavior tests remain future work.
+Identity persistence and the explicit unlinked local bootstrap are implemented and tested; workout business-behavior tests remain future work.
 
 
 ## Adaptive workout interaction

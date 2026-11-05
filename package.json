@@ -25,7 +25,8 @@
     "test:integration": "npm run prisma:generate && bash scripts/test-integration.sh",
     "docs:tools:generate": "bash scripts/tool-reference.sh generate",
     "docs:tools:check": "bash scripts/tool-reference.sh check",
-    "database:load": "node --import tsx scripts/database-load.ts"
+    "database:load": "node --import tsx scripts/database-load.ts",
+    "database:bootstrap-local": "node --import tsx scripts/bootstrap-local-user.ts"
   },
   "keywords": [],
   "author": "",

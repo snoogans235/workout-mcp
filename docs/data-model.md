@@ -42,6 +42,7 @@ The initial migration creates only `WeightUnit`, `User`, and `ExternalIdentity`.
 
 `resolveUser` in `src/identity/users.ts` accepts an already verified issuer/subject pair. The caller must validate the access token before calling it; token validation and HTTP integration remain planned. On first resolution, the caller supplies a separate initial profile containing a nonempty `displayName`, a valid `timezone`, and optional `preferredWeightUnit` (`LB` or `KG`). The profile cannot contain email or an owner ID. Nested creation atomically creates both rows; a concurrent unique-key loser resolves the winning mapping without leaving an orphan user. Returning identities keep their existing profile and preferences. Different keys create different users even if their profiles match.
 
+The [explicit local bootstrap](../README.md#local-bootstrap-user) creates an unlinked application user with a stable UUID. It neither creates an Auth0 account nor links to the first external login. Neither a profile name nor a model-supplied owner ID selects an authenticated user.
 
 ## Catalog and equipment
 
@@ -144,7 +145,7 @@ Training-plan acceptance and progression behavior remain agent/service policies.
 
 ## Verification and status
 
-Prisma 7.10.1 formatting and structural validation pass for the schema. The reviewed identity migration is applied and tested in fresh isolated PostgreSQL databases, including exact-key lookup, concurrency, rollback, restrictive relationships, preference preservation. Structural validation alone does not verify the remaining domain invariants.
+Prisma 7.10.1 formatting and structural validation pass for the schema. The reviewed identity migration is applied and tested in fresh isolated PostgreSQL databases, including exact-key lookup, concurrency, rollback, restrictive relationships, preference preservation, and explicit bootstrap behavior. Structural validation alone does not verify the remaining domain invariants.
 
 The application client is generated into ignored output. Database-free typechecks, compilation, and tests pass. The [local MCP server](../README.md#local-mcp-server) exposes status metadata only and does not use identity persistence. Normal developer database migration state is not established by these tests; see the [migration workflow](../README.md#migration-workflow) and [integration test boundary](../README.md#postgresql-integration-tests).
 
