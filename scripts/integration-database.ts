@@ -107,9 +107,11 @@ async function main(): Promise<void> {
             const result = await child("bash", ["scripts/prisma-migrate.sh", "deploy"], url);
             if (result !== 0) { process.exitCode = result; return; }
         } else console.log("No reviewed migrations checked in; this run proves connection, transaction, and isolation behavior only.");
-        const files = readdirSync(join(root, "tests/integration")).filter(file => file.endsWith(".integration.ts")).sort();
-        if (!files.length) throw new Error("No integration tests found.");
-        process.exitCode = await child(process.execPath, ["--import", "tsx", "--test", "--test-concurrency=1", ...files.map(file => `tests/integration/${file}`)], url);
+        const files = readdirSync(join(root, "tests/integration")).filter(file => file.endsWith(".integration.ts"));
+        if (!files.some(file => status === `tests/integration/${file}`)) {
+            throw new Error("Select an existing integration test file.");
+        }
+        process.exitCode = await child(process.execPath, ["--import", "tsx", "--test", status], url);
     } else if (operation === "artifact") {
         if (!artifactRequired(mode, Number(status))) return;
         await withAdmin(async client => { if (!await owned(client)) throw new Error("Generated database is missing."); });

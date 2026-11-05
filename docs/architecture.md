@@ -1,6 +1,6 @@
 # Workout MCP architecture
 
-Status: agreed direction and proposed domain interfaces. A local Express-hosted `/mcp` endpoint and read-only `server_status` tool are implemented; domain services, authentication, and remote connectivity remain planned. See [local server operation and composition](../README.md#local-mcp-server).
+Status: agreed direction and proposed domain interfaces. A local Express-hosted `/mcp` endpoint and read-only `server_status` tool are implemented; identity persistence is available behind a database boundary, while workout domain services, authentication, and remote connectivity remain planned. See [local server operation and composition](../README.md#local-mcp-server).
 
 ## Stack and request flow
 
@@ -62,6 +62,10 @@ Resolve verified `(iss, sub)` to an application-owned `User.id`. Email, profile 
 Jonathan owns tenant/API configuration, client registration, callback allowlists, and secret administration. Auth0 manages signing keys; the OAuth client stores its registration credential and refresh tokens. The MCP verifier uses public signing keys and needs no OAuth client secret. Never record credentials, access/refresh tokens, or sensitive identity claims in Git, YouTrack, logs, or tool results.
 
 WOR-15 owns persisted identities; WOR-16 owns metadata, token validation, and authenticated context; WOR-17 owns scope enforcement; WOR-18 owns record isolation; WOR-19 owns Secure MCP Tunnel setup and the authenticated ChatGPT connection proof. This contract does not implement those capabilities.
+
+## Implemented identity persistence
+
+`src/identity/users.ts` resolves an already verified issuer/subject pair to an application user through the shared Prisma client. It performs atomic first-user creation with explicit initial profile data and preserves returning-user preferences. It does not verify tokens or run from the current MCP request path. See the [identity persistence contract](data-model.md#users-and-external-identities) and [explicit local bootstrap](../README.md#local-bootstrap-user). The bootstrap user remains unlinked; authentication never falls back to it.
 
 ## Domain schema
 

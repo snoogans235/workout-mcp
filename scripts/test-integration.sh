@@ -9,9 +9,8 @@ case "${TEST_DB_ARTIFACT:-off}" in off|on-failure|always) ;; *) echo 'TEST_DB_AR
 if [[ "${TEST_DB_ARTIFACT:-off}" != off ]]; then
   command -v pg_dump >/dev/null && command -v pg_restore >/dev/null || { echo 'Artifact mode requires pg_dump and pg_restore.' >&2; exit 1; }
 fi
-database_name="workout_mcp_test_$(node --input-type=module -e 'import {randomUUID} from "node:crypto"; console.log(randomUUID().replaceAll("-", ""))')"
+database_name=''
 export TEST_DB_RUN_OWNER="$(node --input-type=module -e 'import {randomUUID} from "node:crypto"; console.log(randomUUID().replaceAll("-", ""))')"
-[[ "$database_name" =~ ^workout_mcp_test_[a-f0-9]{32}$ ]] || exit 1
 helper() { node --import tsx scripts/integration-database.ts "$@"; }
 helper preflight
 child_pid=''
@@ -29,11 +28,19 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-# Install cleanup before creation so even interrupted create attempts are contained.
-created=1
-node --import tsx scripts/integration-database.ts create "$database_name" & child_pid=$!
-wait "$child_pid"
-child_pid=''
-node --import tsx scripts/integration-database.ts run "$database_name" & child_pid=$!
-wait "$child_pid"
-child_pid=''
+# Every test file owns a fresh migrated database. Schema-replacement scenarios
+# cannot destroy the schema used by other persistence scenarios.
+for test_file in tests/integration/*.integration.ts; do
+  database_name="workout_mcp_test_$(node --input-type=module -e 'import {randomUUID} from "node:crypto"; console.log(randomUUID().replaceAll("-", ""))')"
+  [[ "$database_name" =~ ^workout_mcp_test_[a-f0-9]{32}$ ]] || exit 1
+  created=1
+  node --import tsx scripts/integration-database.ts create "$database_name" & child_pid=$!
+  wait "$child_pid"
+  child_pid=''
+  node --import tsx scripts/integration-database.ts run "$database_name" "$test_file" & child_pid=$!
+  wait "$child_pid"
+  child_pid=''
+  helper artifact "$database_name" 0
+  helper drop "$database_name"
+  created=0
+done

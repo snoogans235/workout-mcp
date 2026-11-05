@@ -7,6 +7,7 @@ Canonical documentation for `/Users/jnewton/Projects/typescript/workout_mcp`.
 - [Generated MCP tool reference](tool-reference.md)
 - [Local MCP server](../README.md#local-mcp-server)
 - [Prisma configuration and migration commands](../README.md#prisma-and-database-configuration)
+- [Create the explicit local bootstrap user](../README.md#local-bootstrap-user)
 - [Load a supplied local database archive](../README.md#local-database-replacement)
 - [PostgreSQL integration tests and artifacts](../README.md#postgresql-integration-tests)
 - [Confirmed adaptive workout user flow](user-flow.md)
@@ -19,5 +20,5 @@ Canonical documentation for `/Users/jnewton/Projects/typescript/workout_mcp`.
 - Prisma source: `../prisma/schema.prisma`
 - Editable diagram sources: `diagrams/catalog.mmd`, `diagrams/planning.mmd`, `diagrams/history.mmd`
 
-The schema captures the discussed model and documents remaining assumptions. It passes Prisma structural validation but has not been applied to a database. The original FigJam draft was replaced at the user's request.
+The schema captures the discussed model and documents remaining assumptions. The identity-only migration is tested in isolated PostgreSQL databases; the remaining catalog, planning, and history schema is an unmigrated design draft. The original FigJam draft was replaced at the user's request.
 
