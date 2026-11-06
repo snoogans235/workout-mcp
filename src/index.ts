@@ -6,9 +6,10 @@ import { startServer } from "./server/listener.js";
 try {
     loadProjectEnv();
     const logger = createLogger(loggingLevel(process.env.LOG_LEVEL));
-    const server = await startServer(serverConfiguration(process.env), { logger });
+    const starting = startServer(serverConfiguration(process.env), { logger });
+    let stopping: Promise<void> | undefined;
     const stop = () => {
-        void server.close().catch(async () => {
+        stopping ??= starting.then(server => server.close()).catch(async () => {
             logger.failure({ event: "application_failed", component: "server", errorCode: "INTERNAL_ERROR", cause: "unexpected_exception" });
             await logger.flush();
             process.exitCode = 1;
@@ -16,7 +17,17 @@ try {
             process.off("SIGINT", stop); process.off("SIGTERM", stop);
         });
     };
-    process.once("SIGINT", stop); process.once("SIGTERM", stop);
+    // startServer announces readiness before its promise resumes here. Install
+    // handlers while startup is pending and keep them through graceful shutdown.
+    process.on("SIGINT", stop);
+    process.on("SIGTERM", stop);
+    try {
+        await starting;
+    } catch (error) {
+        process.off("SIGINT", stop);
+        process.off("SIGTERM", stop);
+        throw error;
+    }
 
 } catch {
     const logger = createLogger("info", process.stderr);
