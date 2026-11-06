@@ -1,6 +1,6 @@
 # Workout MCP architecture
 
-Status: agreed direction and proposed domain interfaces. A local Express-hosted `/mcp` endpoint and read-only `server_status` tool are implemented; identity persistence is available behind a database boundary, while workout domain services, authentication, and remote connectivity remain planned. See [local server operation and composition](../README.md#local-mcp-server).
+Status: agreed direction and proposed domain interfaces. A local Express-hosted `/mcp` endpoint and read-only `server_status` tool are implemented; identity persistence is available behind a database boundary, with bearer authentication and persisted user resolution; workout domain services and remote connectivity remain planned. See [local server operation and composition](../README.md#local-mcp-server).
 
 ## Stack and request flow
 
@@ -21,9 +21,9 @@ Develop locally first and decide deployment later. No application GUI is planned
 
 The database preserves facts and durable prescriptions. Agent assessments of stimulus or progression are estimates informed by that evidence; they are not definitive muscle-state flags.
 
-## Planned OAuth contract
+## OAuth contract
 
-[WOR-14](https://gnym.youtrack.cloud/issue/WOR-14) selects Auth0 as the managed authorization server, ChatGPT as the OAuth client, and Workout MCP as the protected resource server. Authentication remains planned: the current server neither validates tokens nor resolves users. [`.env.example`](../.env.example) declares the OAuth variable names; fill their values for your environment in `.env`. The file is loaded into the environment, but current server code does not consume these values for authentication.
+[WOR-14](https://gnym.youtrack.cloud/issue/WOR-14) selects Auth0 as the managed authorization server, ChatGPT as the OAuth client, and Workout MCP as the protected resource server. The HTTP MCP endpoint validates access tokens and resolves application users. [`.env.example`](../.env.example) declares the OAuth variable names; fill their values for your environment in `.env`. Production startup requires the issuer/audience and database configuration; it performs no migrations.
 
 ### Resource and discovery
 
@@ -37,7 +37,7 @@ The database preserves facts and durable prescriptions. Agent assessments of sti
 
 Compare issuer and audience exactly, including the issuer's trailing slash and the audience's absence of one. Use the canonical resource URI consistently in protected-resource metadata, OAuth `resource` requests, the Auth0 API identifier, and access-token audience validation. The resource identifies this development API; the `/mcp` transport path and a later tunnel connection do not change it. This identifier does not require hosted content or DNS during configuration. Production must have separate issuer/audience configuration and must not accept development tokens. See [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization) and [Auth0 API settings](https://auth0.com/docs/get-started/apis/api-settings).
 
-Workout MCP will expose OAuth Protected Resource Metadata naming the resource, authorization server, and supported scopes, and advertise the metadata location in its authentication challenges. The tenant's public discovery advertises authorization code and refresh grants, PKCE `S256`, public subjects, signing keys, and issuer identification in authorization responses. Jonathan confirmed that Resource Parameter Compatibility Profile and Include Issuer in Authorization Responses are enabled. The selected client must use authorization code with PKCE `S256`; the presence of other grants in tenant discovery does not authorize their use by this integration. [Auth0 resource compatibility settings](https://auth0.com/ai/docs/mcp/guides/resource-param-compatibility-profile)
+Workout MCP exposes public OAuth Protected Resource Metadata naming the resource and authorization server, and advertises its location in authentication challenges. Supported scope declarations and enforcement remain WOR-17. The tenant's public discovery advertises authorization code and refresh grants, PKCE `S256`, public subjects, signing keys, and issuer identification in authorization responses. Jonathan confirmed that Resource Parameter Compatibility Profile and Include Issuer in Authorization Responses are enabled. The selected client must use authorization code with PKCE `S256`; the presence of other grants in tenant discovery does not authorize their use by this integration. [Auth0 resource compatibility settings](https://auth0.com/ai/docs/mcp/guides/resource-param-compatibility-profile)
 
 ### Client registration and token lifecycle
 
@@ -55,7 +55,7 @@ These are application policy choices, not Auth0 defaults. The actual tenant/API 
 
 ### Identity, permissions, and provider replacement
 
-The planned verifier uses provider discovery and JWKS to validate signature, allowed algorithm, exact issuer, expected audience, expiry, not-before when present, and a nonempty stable subject. ID tokens cannot authorize MCP requests. Signed JWTs are the selected Auth0 validation path, not an MCP requirement; switching to an opaque-token provider requires an explicitly reviewed standards-based introspection path.
+The implemented verifier uses provider discovery and JWKS to validate signature, allowed algorithm, exact issuer, expected audience, expiry, not-before when present, and a nonempty stable subject. ID tokens cannot authorize MCP requests. Signed JWTs are the selected Auth0 validation path, not an MCP requirement; switching to an opaque-token provider requires an explicitly reviewed standards-based introspection path.
 
 Resolve verified `(iss, sub)` to an application-owned `User.id`. Email, profile names, and model-supplied owner IDs must never select that user. Tool handlers and domain services receive application identity and granted scopes through request context, without Auth0 SDK objects or vendor-specific claims. Keep verification behind a provider-independent boundary and issuer/audience in configuration. Replacing the provider requires an explicit identity migration or account-linking decision; matching emails do not establish identity equivalence. Scopes limit permitted operations, while record ownership independently constrains private reads, writes, and relationships.
 
@@ -65,7 +65,7 @@ WOR-15 owns persisted identities; WOR-16 owns metadata, token validation, and au
 
 ## Implemented identity persistence
 
-`src/identity/users.ts` resolves an already verified issuer/subject pair to an application user through the shared Prisma client. It performs atomic first-user creation with explicit initial profile data and preserves returning-user preferences. It does not verify tokens or run from the current MCP request path. See the [identity persistence contract](data-model.md#users-and-external-identities) and [explicit local bootstrap](../README.md#local-bootstrap-user). The bootstrap user remains unlinked; authentication never falls back to it.
+`src/identity/users.ts` resolves an already verified issuer/subject pair to an application user through the shared Prisma client. It performs atomic first-user creation with explicit initial profile data and preserves returning-user display names and timezones. HTTP authentication calls it only after token verification, supplying neutral initial profile defaults; returning display names and timezones are preserved. See [authenticated request composition](../README.md#authenticated-identity-and-handler-context) for defaults, context access, and failure behavior. See the [identity persistence contract](data-model.md#users-and-external-identities) and [explicit local bootstrap](../README.md#local-bootstrap-user). The bootstrap user remains unlinked; authentication never falls back to it.
 
 ## Domain schema
 
@@ -101,9 +101,9 @@ If equipment is occupied, the agent selects an alternative using catalog attribu
 
 ## Before remote access
 
-Choose supported ChatGPT connectivity and verify account availability. Implement authenticated user identity, private-data authorization, write validation, retry protection, and deployment/backups. Shared catalog curation rights and private custom entries need decisions before multi-user use.
+Choose supported ChatGPT connectivity and verify account availability. Complete operation-scope enforcement, private-data authorization, write validation, retry protection, and deployment/backups. Shared catalog curation rights and private custom entries need decisions before multi-user use.
 
-The existing HTTP endpoint binds only to `127.0.0.1` and serves status metadata without a database connection. No remote connection exists yet.
+The existing HTTP endpoint binds only to `127.0.0.1`. OAuth protected-resource metadata is public and requires no database lookup; the protected `server_status` tool requires a verified access token and persisted user resolution. No remote connection exists yet.
 
 ## References
 

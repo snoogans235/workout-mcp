@@ -71,7 +71,7 @@ run_step() {
 
 run_step npm run build
 MCP_HOST=127.0.0.1 MCP_PORT="${TOOL_REFERENCE_PORT:-0}" LOG_LEVEL=info \
-    node dist/index.js >"$temporary/server.log" 2>&1 &
+    node --import tsx scripts/tool-reference-server.ts >"$temporary/server.log" 2>&1 &
 server_pid=$!
 
 port=
@@ -105,6 +105,7 @@ fi
 
 cli=node_modules/.bin/mcpcontract
 run_step "$cli" dump --transport streamable-http --url "http://127.0.0.1:$port/mcp" \
+    --header 'Authorization: Bearer tool-reference-fixture' \
     --protocol 2026-07-28 --skip-cors-check --quiet --output "$temporary/raw.json"
 run_step "$cli" validate "$temporary/raw.json" --strict
 
