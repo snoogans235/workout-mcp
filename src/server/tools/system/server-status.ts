@@ -5,7 +5,8 @@ const service = "workout-mcp";
 
 export function registerServerStatus(tools: ToolRegistrar, version: string): void {
     tools.registerTool("server_status", {
-        description: "Return the local server's status, service name, and application version.",
+        requiredScope: "workout:read",
+        description: "Requires workout:read. Return the local server's status, service name, and application version.",
         inputSchema: z.object({}).strict(),
         outputSchema: z.object({
             status: z.literal("ok"),

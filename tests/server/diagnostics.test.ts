@@ -55,7 +55,7 @@ for (const dependency of [false, true]) {
         const output = capture();
         const application = createApplication({ logger: output.logger, serverFactory: () => {
             const server = new McpServer({ name: "test", version: "1" });
-            new ToolRegistrar(server).registerTool("test_failure", { inputSchema: z.object({ value: z.string() }) }, async () => {
+            new ToolRegistrar(server).registerTool("test_failure", { requiredScope: "workout:read", inputSchema: z.object({ value: z.string() }) }, async () => {
                 if (dependency) {
                     throw new ApplicationError(ErrorDefinitions.DEPENDENCY_UNAVAILABLE, "database", { cause: new Error(`postgresql://${secret}@localhost/private`) });
                 }
@@ -121,7 +121,7 @@ test("concurrent request failures retain their own correlation across asynchrono
     const output = capture();
     const application = createApplication({ logger: output.logger, serverFactory: () => {
         const server = new McpServer({ name: "concurrency-test", version: "1" });
-        new ToolRegistrar(server).registerTool("test_failure", { inputSchema: z.object({}) }, async () => {
+        new ToolRegistrar(server).registerTool("test_failure", { requiredScope: "workout:read", inputSchema: z.object({}) }, async () => {
             await new Promise<void>(resolve => setImmediate(resolve));
             throw new ApplicationError(ErrorDefinitions.CONFIGURATION_INVALID, "configuration", { cause: new Error(secret) });
         });

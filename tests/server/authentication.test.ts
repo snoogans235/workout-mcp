@@ -34,7 +34,7 @@ test("HTTP auth rejects invalid tokens before handlers and supplies only immutab
     };
     const application = createApplication({ authentication, logger: createLogger("info", stream), serverFactory: () => {
         const server = new McpServer({ name: "auth-fixture", version: "1" });
-        new ToolRegistrar(server).registerTool("probe", { inputSchema: z.object({ userId: z.string().optional() }) }, () => {
+        new ToolRegistrar(server).registerTool("probe", { requiredScope: "workout:read", inputSchema: z.object({ userId: z.string().optional() }) }, () => {
             executions++;
             const context = authenticatedRequest();
             assert.ok(Object.isFrozen(context));
@@ -51,7 +51,7 @@ test("HTTP auth rejects invalid tokens before handlers and supplies only immutab
     const client = new Client({ name: "verification", version: "1" }, { versionNegotiation: { mode: { pin: "2026-07-28" } } });
     try {
         const metadata = await fetch(new URL("/.well-known/oauth-protected-resource", url));
-        assert.deepEqual(await metadata.json(), { resource: configuration.resource, authorization_servers: [configuration.issuer], bearer_methods_supported: ["header"] });
+        assert.deepEqual(await metadata.json(), { resource: configuration.resource, authorization_servers: [configuration.issuer], bearer_methods_supported: ["header"], scopes_supported: ["workout:read", "workout:write"] });
         const invalidClaims = [
             { ...valid, exp: now - 1 }, { ...valid, iss: "https://issuer.example" },
             { ...valid, aud: "id-token-client" }, { ...valid, sub: "" }, { ...valid, nbf: now + 60 },

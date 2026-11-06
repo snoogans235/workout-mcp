@@ -6,6 +6,38 @@ import { startServer } from "./authentication-fixture.js";
 
 for (const entrypoint of [["--import", "tsx", "src/index.ts"], ["dist/index.js"]]) {
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    test(`${entrypoint.at(-1)} handles ${signal} when startup is announced`, () => {
+        // Deliver at the announcement itself, before startServer's promise can
+        // resume the entry point. This makes the readiness ordering deterministic.
+        const injection = `
+            import assert from "node:assert/strict";
+            const write = process.stdout.write;
+            const listeners = [process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")];
+            process.once("beforeExit", () => {
+                assert.deepEqual([process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")], listeners);
+            });
+            process.stdout.write = function (chunk, ...args) {
+                if (String(chunk).includes('"event":"startup"')) {
+                    process.stdout.write = write;
+                    assert.ok(process.listenerCount(${JSON.stringify(signal)}) > 0, "Startup announced before signal handling was ready");
+                    process.emit(${JSON.stringify(signal)});
+                    process.emit(${JSON.stringify(signal)});
+                    process.emit(${JSON.stringify(signal === "SIGINT" ? "SIGTERM" : "SIGINT")});
+                }
+                return write.call(this, chunk, ...args);
+            };
+        `;
+        const result = spawnSync(process.execPath, ["--import", `data:text/javascript,${encodeURIComponent(injection)}`, ...entrypoint], {
+            env: { ...process.env, MCP_HOST: "127.0.0.1", MCP_PORT: "0", DATABASE_URL: "postgresql://unused@127.0.0.1:1/workout", OAUTH_ISSUER: "https://issuer.example/", OAUTH_AUDIENCE: "https://api.example" },
+            encoding: "utf8", timeout: 5000,
+        });
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(result.signal, null);
+        assert.equal(result.stderr, "");
+        const events = result.stdout.trim().split("\n").map(line => JSON.parse(line).event);
+        assert.deepEqual(events, ["startup", "shutdown"]);
+    });
+
     test(`${entrypoint.at(-1)} ${signal} closes partial requests and permits rebinding`, async () => {
         const child = spawn(process.execPath, entrypoint, {
             env: { ...process.env, MCP_HOST: "127.0.0.1", MCP_PORT: "0", DATABASE_URL: "postgresql://unused-database-sentinel@127.0.0.1:1/workout", OAUTH_ISSUER: "https://issuer.example/", OAUTH_AUDIENCE: "https://api.example" },

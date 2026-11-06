@@ -2,6 +2,9 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import express, { type ErrorRequestHandler } from "express";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { requiredToolScope } from "./tools/tool-registrar.js";
+import { authenticatedRequest } from "../authentication/requests.js";
 import { randomUUID } from "node:crypto";
 import { createLogger, type DiagnosticLogger } from "../diagnostics/logger.js";
 import { requestContext } from "../diagnostics/errors.js";
@@ -11,7 +14,14 @@ import { requireAuthentication, resourceMetadata, type Authentication } from "..
 /** Construct an unbound app; each MCP request receives its own server instance. */
 export function createApplication(options: { logger?: DiagnosticLogger; serverFactory?: typeof createServer; authentication?: Authentication } = {}) {
     const logger = options.logger ?? createLogger();
-    const handler = createMcpHandler(() => (options.serverFactory ?? createServer)());
+    const requestServers = new AsyncLocalStorage<ReturnType<typeof createServer>>();
+    const handler = createMcpHandler(() => {
+        const server = requestServers.getStore();
+        if (!server) {
+            throw new Error("Request server is unavailable.");
+        }
+        return server;
+    });
     const app = express();
     app.use("/mcp", (_request, response, next) => {
         const requestId = randomUUID();
@@ -40,7 +50,33 @@ export function createApplication(options: { logger?: DiagnosticLogger; serverFa
         app.use("/mcp", (_request, response) => { response.status(401).json({ error: "invalid_token" }); });
     }
     const nodeHandler = toNodeHandler(handler);
-    app.all("/mcp", async (request, response) => { await nodeHandler(request, response, request.body); });
+    app.all("/mcp", async (request, response) => {
+        const server = (options.serverFactory ?? createServer)();
+        try {
+            const messages: unknown[] = Array.isArray(request.body) ? request.body : [request.body];
+            for (const message of messages) {
+                if (!message || typeof message !== "object" || !("method" in message)
+                    || message.method !== "tools/call" || !("params" in message)) {
+                    continue;
+                }
+                const params = message.params;
+                if (!params || typeof params !== "object" || !("name" in params) || typeof params.name !== "string") {
+                    continue;
+                }
+                const scope = requiredToolScope(server, params.name);
+                if (authentication && scope && !authenticatedRequest().scopes.includes(scope)) {
+                    const resource = authentication.configuration.resource;
+                    const metadataUrl = new URL("/.well-known/oauth-protected-resource", resource).href;
+                    response.setHeader("WWW-Authenticate", `Bearer error="insufficient_scope", scope="${scope}", resource_metadata="${metadataUrl}"`);
+                    response.status(403).json({ error: "insufficient_scope", scope });
+                    return;
+                }
+            }
+            await requestServers.run(server, () => nodeHandler(request, response, request.body));
+        } finally {
+            await server.close();
+        }
+    });
     const errors: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
         if (response.headersSent) { response.destroy(); return; }
         const malformed = error instanceof SyntaxError && "status" in error && error.status === 400;

@@ -10,7 +10,7 @@ Reference documentation for the **workout-mcp** MCP server capabilities.
 
 ### Tools (1)
 
-- [`server_status`](#server_status) - Return the local server's status, service name, and application version.
+- [`server_status`](#server_status) - Requires workout:read.
 
 
 
@@ -23,7 +23,7 @@ Reference documentation for the **workout-mcp** MCP server capabilities.
 
 #### Tool `server_status`
 
-Return the local server's status, service name, and application version.
+Requires workout:read. Return the local server's status, service name, and application version.
 
 **Parameters:**
 
