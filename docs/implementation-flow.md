@@ -1,6 +1,6 @@
 # High-level implementation flow
 
-Status: proposed implementation design for the confirmed [user flow](user-flow.md). A [local MCP server](../README.md#local-mcp-server) with a read-only status tool exists; bearer authentication and identity-only persistence are implemented. The domain flow, remaining domain migrations, and workout tools below remain unimplemented.
+Status: proposed implementation design for the confirmed [user flow](user-flow.md). A [local MCP server](../README.md#local-mcp-server) with a read-only status tool exists; bearer authentication, shared read/write scope enforcement, and identity-only persistence are implemented. See [scope and handler guidance](../README.md#authenticated-identity-and-handler-context). The domain flow, remaining domain migrations, and workout tools below remain unimplemented.
 
 [FigJam board](https://www.figma.com/board/qIflGPGcLYbqobCjAxmAIl) · [Editable implementation swimlane source](diagrams/implementation-flow.mmd)
 

@@ -37,7 +37,7 @@ The database preserves facts and durable prescriptions. Agent assessments of sti
 
 Compare issuer and audience exactly, including the issuer's trailing slash and the audience's absence of one. Use the canonical resource URI consistently in protected-resource metadata, OAuth `resource` requests, the Auth0 API identifier, and access-token audience validation. The resource identifies this development API; the `/mcp` transport path and a later tunnel connection do not change it. This identifier does not require hosted content or DNS during configuration. Production must have separate issuer/audience configuration and must not accept development tokens. See [MCP authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization) and [Auth0 API settings](https://auth0.com/docs/get-started/apis/api-settings).
 
-Workout MCP exposes public OAuth Protected Resource Metadata naming the resource and authorization server, and advertises its location in authentication challenges. Supported scope declarations and enforcement remain WOR-17. The tenant's public discovery advertises authorization code and refresh grants, PKCE `S256`, public subjects, signing keys, and issuer identification in authorization responses. Jonathan confirmed that Resource Parameter Compatibility Profile and Include Issuer in Authorization Responses are enabled. The selected client must use authorization code with PKCE `S256`; the presence of other grants in tenant discovery does not authorize their use by this integration. [Auth0 resource compatibility settings](https://auth0.com/ai/docs/mcp/guides/resource-param-compatibility-profile)
+Workout MCP exposes public OAuth Protected Resource Metadata naming the resource and authorization server, and advertises its location in authentication challenges. Its `scopes_supported` lists exactly `workout:read` and `workout:write`, shared with runtime enforcement. Every tool declares one required scope through `ToolRegistrar`; `server_status` requires read. Insufficient scope returns HTTP 403 before dispatch, with the required scope and resource metadata in the challenge. Write does not imply read; unrelated scopes grant no application capability. See [scope operation and extension guidance](../README.md#authenticated-identity-and-handler-context). The tenant's public discovery advertises authorization code and refresh grants, PKCE `S256`, public subjects, signing keys, and issuer identification in authorization responses. Jonathan confirmed that Resource Parameter Compatibility Profile and Include Issuer in Authorization Responses are enabled. The selected client must use authorization code with PKCE `S256`; the presence of other grants in tenant discovery does not authorize their use by this integration. [Auth0 resource compatibility settings](https://auth0.com/ai/docs/mcp/guides/resource-param-compatibility-profile)
 
 ### Client registration and token lifecycle
 
@@ -61,7 +61,7 @@ Resolve verified `(iss, sub)` to an application-owned `User.id`. Email, profile 
 
 Jonathan owns tenant/API configuration, client registration, callback allowlists, and secret administration. Auth0 manages signing keys; the OAuth client stores its registration credential and refresh tokens. The MCP verifier uses public signing keys and needs no OAuth client secret. Never record credentials, access/refresh tokens, or sensitive identity claims in Git, YouTrack, logs, or tool results.
 
-WOR-15 owns persisted identities; WOR-16 owns metadata, token validation, and authenticated context; WOR-17 owns scope enforcement; WOR-18 owns record isolation; WOR-19 owns Secure MCP Tunnel setup and the authenticated ChatGPT connection proof. This contract does not implement those capabilities.
+WOR-15 owns persisted identities; WOR-16 owns metadata, token validation, and authenticated context; WOR-17 owns scope enforcement; WOR-18 owns record isolation; WOR-19 owns Secure MCP Tunnel setup and the authenticated ChatGPT connection proof. Identity persistence, token validation/context, and scope enforcement are implemented; record isolation and the remote connection proof remain planned.
 
 ## Implemented identity persistence
 
@@ -101,7 +101,7 @@ If equipment is occupied, the agent selects an alternative using catalog attribu
 
 ## Before remote access
 
-Choose supported ChatGPT connectivity and verify account availability. Complete operation-scope enforcement, private-data authorization, write validation, retry protection, and deployment/backups. Shared catalog curation rights and private custom entries need decisions before multi-user use.
+Choose supported ChatGPT connectivity and verify account availability. Complete private-data authorization, write validation, retry protection, and deployment/backups. Shared catalog curation rights and private custom entries need decisions before multi-user use.
 
 The existing HTTP endpoint binds only to `127.0.0.1`. OAuth protected-resource metadata is public and requires no database lookup; the protected `server_status` tool requires a verified access token and persisted user resolution. No remote connection exists yet.
 

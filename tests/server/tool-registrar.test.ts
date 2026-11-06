@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { authenticatedTest as test } from "./authentication-fixture.js";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport, McpServer, ProtocolError } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
@@ -12,6 +12,7 @@ test("registration guards sync and async handlers and retains SDK schema/context
     const tools = new ToolRegistrar(server);
     let calls = 0;
     tools.registerTool("typed", {
+        requiredScope: "workout:read",
         inputSchema: z.object({ count: z.number() }).strict(),
         outputSchema: z.object({ doubled: z.number() }),
     }, (args, context) => {
@@ -21,20 +22,21 @@ test("registration guards sync and async handlers and retains SDK schema/context
         return { content: [{ type: "text", text: String(doubled) }], structuredContent: { doubled } };
     });
     for (const definition of Object.values(ErrorDefinitions)) {
-        tools.registerTool(definition.code, {}, () => {
+        tools.registerTool(definition.code, { requiredScope: "workout:read" }, () => {
             throw new ApplicationError(definition, "application");
         });
     }
-    tools.registerTool("async", {}, async () => { throw new Error("private-cause"); });
-    tools.registerTool("protocol", {}, () => { throw new ProtocolError(-32602, "SDK validation"); });
-    tools.registerTool("context_only", {}, context => ({
+    tools.registerTool("async", { requiredScope: "workout:read" }, async () => { throw new Error("private-cause"); });
+    tools.registerTool("protocol", { requiredScope: "workout:read" }, () => { throw new ProtocolError(-32602, "SDK validation"); });
+    tools.registerTool("context_only", { requiredScope: "workout:read" }, context => ({
         content: [{ type: "text", text: context.mcpReq.method }],
     }));
     tools.registerTool("invalid_output", {
+        requiredScope: "workout:read",
         inputSchema: z.object({}),
         outputSchema: z.object({ count: z.number() }),
     }, () => ({ content: [], structuredContent: { count: "invalid" } }));
-    tools.registerTool("sync_unexpected", {}, () => { throw new Error("private-sync-cause"); });
+    tools.registerTool("sync_unexpected", { requiredScope: "workout:read" }, () => { throw new Error("private-sync-cause"); });
     const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
     const client = new Client({ name: "registrar-client", version: "1" });
     try {
@@ -91,10 +93,10 @@ test("one registrar serves multiple registries with guarded plain handlers", asy
     const server = new McpServer({ name: "multiple-registries", version: "1" });
     const tools = new ToolRegistrar(server);
     const firstRegistry = (tools: ToolRegistrar) => {
-        tools.registerTool("first_registry", {}, () => { throw new Error("private-first"); });
+        tools.registerTool("first_registry", { requiredScope: "workout:read" }, () => { throw new Error("private-first"); });
     };
     const secondRegistry = (tools: ToolRegistrar) => {
-        tools.registerTool("second_registry", {}, async () => {
+        tools.registerTool("second_registry", { requiredScope: "workout:read" }, async () => {
             throw new ApplicationError(ErrorDefinitions.DEPENDENCY_UNAVAILABLE, "database");
         });
     };

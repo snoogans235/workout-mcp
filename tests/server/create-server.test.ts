@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { authenticatedTest as test } from "./authentication-fixture.js";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { createServer } from "../../src/server/create-server.js";
@@ -18,7 +18,7 @@ test("fresh servers register the exact status contract and close independently",
             assert.deepEqual((await clients[index].listTools()).tools, [{
                 name: "server_status",
                 title: undefined, icons: undefined, execution: undefined, _meta: undefined,
-                description: "Return the local server's status, service name, and application version.",
+                description: "Requires workout:read. Return the local server's status, service name, and application version.",
                 inputSchema: {
                     type: "object", properties: {}, additionalProperties: false,
                     $schema: "https://json-schema.org/draft/2020-12/schema",

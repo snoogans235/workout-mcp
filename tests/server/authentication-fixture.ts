@@ -5,7 +5,7 @@ import { startServer as listener } from "../../src/server/listener.js";
 export function testAuthentication(): Authentication {
     return {
         configuration: { issuer: "https://issuer.example/", resource: "https://api.example" },
-        verify: async () => ({ issuer: "https://issuer.example/", subject: "fixture", scopes: [] }),
+        verify: async () => ({ issuer: "https://issuer.example/", subject: "fixture", scopes: ["workout:read", "workout:write"] }),
         resolveUser: async () => ({ id: "fixture-user" }),
         close: async () => {},
     };
@@ -21,3 +21,12 @@ export const authenticatedFetch: typeof fetch = (input, init) => {
     }
     return globalThis.fetch(input, { ...init, headers });
 };
+
+import { test } from "node:test";
+import { authenticatedRequests } from "../../src/authentication/requests.js";
+
+export function authenticatedTest(name: string, callback: () => void | Promise<void>) {
+    return test(name, () => authenticatedRequests.run(
+        Object.freeze({ userId: "fixture-user", scopes: Object.freeze(["workout:read", "workout:write"]) }), callback,
+    ));
+}

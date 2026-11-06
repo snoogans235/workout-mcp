@@ -1,3 +1,4 @@
+import { workoutScopes } from "./scopes.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { RequestHandler } from "express";
 import type { OAuthConfiguration, VerifiedAccessToken, VerifyAccessToken } from "./tokens.js";
@@ -8,7 +9,7 @@ export interface AuthenticatedRequest {
     readonly scopes: readonly string[];
 }
 
-const authenticatedRequests = new AsyncLocalStorage<AuthenticatedRequest>();
+export const authenticatedRequests = new AsyncLocalStorage<AuthenticatedRequest>();
 
 /** Available to handlers and domain composition only within an authenticated request. */
 export function authenticatedRequest(): AuthenticatedRequest {
@@ -31,6 +32,7 @@ export function resourceMetadata(configuration: OAuthConfiguration) {
         resource: configuration.resource,
         authorization_servers: [configuration.issuer],
         bearer_methods_supported: ["header"],
+        scopes_supported: workoutScopes,
     };
 }
 
