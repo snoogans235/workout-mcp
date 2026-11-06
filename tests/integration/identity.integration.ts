@@ -5,8 +5,41 @@ import { test } from "node:test";
 import { createDatabase } from "../../src/database/index.js";
 import { bootstrapLocalUser, LOCAL_USER_ID, resolveUser } from "../../src/identity/users.js";
 import { requireTestDatabaseName } from "../../scripts/integration/config.js";
+import { createAuthentication } from "../../src/authentication/runtime.js";
 
 const profile = { displayName: "Test user", timezone: "America/Indiana/Indianapolis" };
+
+test("authentication provisions neutral first-login preferences and preserves returning changes", async () => {
+    const url = process.env.DATABASE_URL;
+    assert.ok(url);
+    requireTestDatabaseName(decodeURIComponent(new URL(url).pathname.slice(1)));
+    const authentication = createAuthentication({ DATABASE_URL: url, OAUTH_ISSUER: "https://jit.example/", OAUTH_AUDIENCE: "https://api.example" });
+    const database = createDatabase(url);
+    const identity = { issuer: "https://jit.example/", subject: "first-login", scopes: [] };
+    let createdUserId: string | undefined;
+    try {
+        const first = await authentication.resolveUser(identity);
+        createdUserId = first.id;
+        const user = await database.client.user.findUniqueOrThrow({ where: { id: first.id } });
+        assert.equal(user.displayName, "Workout user");
+        assert.equal(user.timezone, "UTC");
+        assert.notEqual(user.id, LOCAL_USER_ID);
+        await database.client.user.update({ where: { id: user.id }, data: { displayName: "Chosen", timezone: "Europe/London" } });
+        const returning = await authentication.resolveUser(identity);
+        assert.equal(returning.id, user.id);
+        const updated = await database.client.user.findUniqueOrThrow({ where: { id: user.id } });
+        assert.equal(updated.displayName, "Chosen");
+        assert.equal(updated.timezone, "Europe/London");
+    } finally {
+        // Keep this fixture independent of the existing migration row-count assertions.
+        await database.client.externalIdentity.deleteMany({ where: { issuer: identity.issuer } });
+        if (createdUserId) {
+            await database.client.user.deleteMany({ where: { id: createdUserId } });
+        }
+        await authentication.close();
+        await database.disconnect();
+    }
+});
 
 test("identity migration and persistence preserve unique owners and atomic creation", async () => {
     const url = process.env.DATABASE_URL;
@@ -20,10 +53,9 @@ test("identity migration and persistence preserve unique owners and atomic creat
         await assert.rejects(resolveUser(client, identity), /requires an initial user profile/);
         assert.equal(await client.user.count(), 0);
         const first = await resolveUser(client, identity, profile);
-        assert.equal(first.preferredWeightUnit, "LB");
         assert.equal(first.timezone, profile.timezone);
         assert.equal(first.displayName, profile.displayName);
-        const returning = await resolveUser(client, identity, { displayName: "Changed", timezone: "UTC", preferredWeightUnit: "KG" });
+        const returning = await resolveUser(client, identity, { displayName: "Changed", timezone: "UTC" });
         assert.deepEqual(returning, first, "returning login must not overwrite preferences or timestamps");
         assert.equal((await resolveUser(client, identity)).id, first.id);
 
@@ -53,6 +85,8 @@ test("identity migration and persistence preserve unique owners and atomic creat
 
         const modelSuppliedIdentity = { ...identity, email: "same@example.test", userId: second.id };
         await assert.rejects(resolveUser(client, modelSuppliedIdentity, profile), /Verified identity/);
+        const removedUnitProfile = { ...profile, preferredWeightUnit: "KG" };
+        await assert.rejects(resolveUser(client, { ...identity, subject: "removed-user-unit" }, removedUnitProfile), /Initial user profile/);
         const badProfile = { ...profile, email: "same@example.test", userId: second.id };
         await assert.rejects(resolveUser(client, { ...identity, subject: "new" }, badProfile), /Initial user profile/);
         await assert.rejects(resolveUser(client, { ...identity, subject: " " }, profile), /Verified identity/);
@@ -68,7 +102,6 @@ test("identity migration and persistence preserve unique owners and atomic creat
         assert.equal(local.displayName, "local");
         assert.equal(local.timezone, profile.timezone);
         assert.equal(local.id, LOCAL_USER_ID);
-        assert.equal(local.preferredWeightUnit, "LB");
         assert.deepEqual(await bootstrapLocalUser(client, { displayName: "changed", timezone: "UTC" }), local);
         assert.equal(await client.externalIdentity.count({ where: { userId: local.id } }), 0);
         assert.equal(await client.user.count(), 5);
@@ -78,17 +111,17 @@ test("identity migration and persistence preserve unique owners and atomic creat
     }
 });
 
-test("identity keys remain exact and explicit kilogram preferences survive returning resolution", async () => {
+test("identity keys remain exact and existing profiles survive returning resolution", async () => {
     const database = createDatabase(process.env.DATABASE_URL);
     try {
         await database.connect();
         const identity = { issuer: "https://exact.example/", subject: "CaseSensitive" };
-        const first = await resolveUser(database.client, identity, { ...profile, preferredWeightUnit: "KG" });
+        const first = await resolveUser(database.client, identity, { ...profile });
         const otherIssuer = await resolveUser(database.client, { ...identity, issuer: "https://exact.example" }, profile);
         const otherSubject = await resolveUser(database.client, { ...identity, subject: "casesensitive" }, profile);
         assert.equal(new Set([first.id, otherIssuer.id, otherSubject.id]).size, 3);
-        assert.equal((await resolveUser(database.client, identity)).preferredWeightUnit, "KG");
 
+        assert.deepEqual(await resolveUser(database.client, identity), first);
         const before = await database.client.externalIdentity.count();
         for (const invalid of [{ issuer: " ", subject: "blank-issuer" }, { issuer: identity.issuer, subject: " " }]) {
             await assert.rejects(database.client.externalIdentity.create({ data: { ...invalid, user: { create: profile } } }));

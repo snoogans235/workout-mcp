@@ -5,7 +5,7 @@
 - Stack chosen: TypeScript, Node.js, Express, PostgreSQL, Prisma.
 - Domain schema written in `../prisma/schema.prisma`.
 - Prisma 7.10.1 formatting and structural validation passed.
-- The identity-only SQL migration is verified in isolated PostgreSQL databases; remaining domain models await reviewed migrations.
+- The identity-only SQL migrations are verified in isolated PostgreSQL databases; remaining domain models await reviewed migrations.
 - FigJam original draft replaced by catalog, planning, and workout-history diagrams.
 
 ## Implemented development foundation
@@ -14,11 +14,11 @@ The repository contains a Node/TypeScript scaffold, a readiness-greeting unit te
 
 Prisma 7.10.1 packages, configuration, ignored client generation, migration commands, and an explicit reusable client/pool boundary are implemented. Database-free verification and read-only connection, disconnection, and resource release against an existing database through a Unix socket pass. See [Prisma configuration](../README.md#prisma-and-database-configuration).
 
-The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique migrated test database per file, verifies identity persistence and transaction rollback/isolation, and optionally retains validated local test dumps. Only the identity tables and weight-unit enum are migrated. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
+The separate [PostgreSQL integration command](../README.md#postgresql-integration-tests) creates and cleans up a unique migrated test database per file, verifies identity persistence and transaction rollback/isolation, and optionally retains validated local test dumps. Only the identity tables remain after the reviewed migration set; a follow-up migration removes the historical user-unit column and enum. The dedicated PostgreSQL 18 CI job keeps artifact mode off and dump uploads disabled for this public repository; restricted CI uploads are deferred while local artifact modes remain available.
 
 The [local database loader](../README.md#local-database-replacement) atomically replaces a deliberately selected local `public` schema and data from a supplied full PostgreSQL 18 custom archive. It creates no backup/export and runs no migrations. Isolated synthetic tests verify replacement, repeat loading, fidelity, and failure/interruption rollback; loading does not establish application-schema compatibility, and non-superuser execution remains unverified.
 
-The [local MCP server](../README.md#local-mcp-server) exposes `/mcp` on loopback with a strict, read-only `server_status` tool. Official-client discovery/calls and process shutdown are verified; the server does not connect to PostgreSQL or implement the workout flow.
+The [local MCP server](../README.md#local-mcp-server) exposes `/mcp` on loopback with a strict, read-only `server_status` tool. Official-client discovery/calls and process shutdown are verified; the protected endpoint validates bearer JWTs and resolves users through PostgreSQL, while workout flow remains unimplemented. First verified identities receive neutral profile defaults; returning display names and timezones are preserved. Deterministic fixtures verify discovery/JWKS behavior and invalid-token/outage handling; live provider and ChatGPT connectivity remain unverified. Operation scopes and private-record ownership remain follow-up work.
 
 The [generated MCP tool reference](tool-reference.md) is extracted from that local server's published metadata. Local generation and checking share the CI path; missing or stale reference content fails the check. See [reference maintenance](../README.md#generated-mcp-tool-reference) for commands and source-authoring guidance.
 

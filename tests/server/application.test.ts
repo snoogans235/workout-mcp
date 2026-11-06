@@ -1,15 +1,16 @@
+import { authenticatedFetch as fetch } from "./authentication-fixture.js";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { request } from "node:http";
 import { test } from "node:test";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { startServer } from "../../src/server/listener.js";
+import { startServer } from "./authentication-fixture.js";
 
 test("official client discovers and calls only the strict readonly status tool", async () => {
     const server = await startServer({ host: "127.0.0.1", port: 0 });
     const client = new Client({ name: "verification", version: "1.0.0" }, { versionNegotiation: { mode: { pin: "2026-07-28" } } });
     try {
-        await client.connect(new StreamableHTTPClientTransport(server.url));
+        await client.connect(new StreamableHTTPClientTransport(server.url, { fetch }));
         const tools = await client.listTools();
         assert.deepEqual(tools.tools.map(tool => tool.name), ["server_status"]);
         assert.equal(tools.tools[0].annotations?.readOnlyHint, true);
@@ -28,7 +29,7 @@ test("official client discovers and calls only the strict readonly status tool",
 test("malformed requests, nonlocal headers, and unsupported methods fail without stack traces", async () => {
     const server = await startServer({ host: "127.0.0.1", port: 0 });
     const send = (body: string, headers: Record<string, string> = {}, method = "POST") => new Promise<{ status: number; body: string }>((resolve, reject) => {
-        const call = request(server.url, { method, headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...headers } }, response => {
+        const call = request(server.url, { method, headers: { authorization: "Bearer fixture", "content-type": "application/json", accept: "application/json, text/event-stream", ...headers } }, response => {
             let text = "";
             response.setEncoding("utf8").on("data", chunk => { text += chunk; });
             response.on("end", () => resolve({ status: response.statusCode ?? 0, body: text }));

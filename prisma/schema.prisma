@@ -22,11 +22,6 @@ enum MuscleRole {
   SECONDARY
 }
 
-enum WeightUnit {
-  LB
-  KG
-}
-
 enum MovementPattern {
   HORIZONTAL_PUSH
   HORIZONTAL_PULL
@@ -77,12 +72,11 @@ enum SetRole {
 }
 
 model User {
-  id                  String     @id @default(uuid()) @db.Uuid
-  displayName         String
-  timezone            String
-  preferredWeightUnit WeightUnit @default(LB)
-  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
+  id          String   @id @default(uuid()) @db.Uuid
+  displayName String
+  timezone    String
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
   externalIdentity ExternalIdentity?
 

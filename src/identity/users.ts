@@ -13,7 +13,6 @@ const profileSchema = z.strictObject({
             return false;
         }
     }),
-    preferredWeightUnit: z.enum(["LB", "KG"]).optional(),
 });
 
 export type VerifiedIdentity = z.infer<typeof identitySchema>;
@@ -33,7 +32,7 @@ function parseIdentity(input: VerifiedIdentity): VerifiedIdentity {
 function parseProfile(input: InitialUserProfile): InitialUserProfile {
     const result = profileSchema.safeParse(input);
     if (!result.success) {
-        throw new Error("Initial user profile requires a name, valid timezone, and supported weight unit.");
+        throw new Error("Initial user profile requires a name and valid timezone.");
     }
     return result.data;
 }

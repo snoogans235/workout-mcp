@@ -1,6 +1,6 @@
 # Workout MCP data model
 
-Status: User/external-identity persistence and its identity-only migration are implemented and tested in isolated PostgreSQL databases. Catalog, planning, and history models remain executable Prisma design drafts without migrations. Developer database migration state is environment-specific.
+Status: User/external-identity persistence and its identity-only migrations are implemented and tested in isolated PostgreSQL databases. Catalog, planning, and history models remain executable Prisma design drafts without migrations. Developer database migration state is environment-specific.
 
 - Schema: `../prisma/schema.prisma`
 - [Editable FigJam board](https://www.figma.com/board/qIflGPGcLYbqobCjAxmAIl)
@@ -16,7 +16,7 @@ Measurement type belongs to Exercise, not WorkoutSet. Set measurements live in J
 
 | Area | Model | Responsibility |
 | --- | --- | --- |
-| Identity | User | Workout owner, timezone, and preferred weight unit |
+| Identity | User | Workout owner, display name, and timezone |
 | Identity | ExternalIdentity | Unique verified issuer/subject mapped to one application user |
 | Catalog | Exercise | Specific variant, measurement type, movement pattern, optional equipment model |
 | Catalog | EquipmentModel | Manufacturer, model name, and equipment category |
@@ -36,11 +36,11 @@ UUID primary keys identify domain records; external identities use the issuer/su
 
 ## Users and external identities
 
-The initial migration creates only `WeightUnit`, `User`, and `ExternalIdentity`. Existing private-domain relationships remain declared in Prisma for future migrations. `User` requires a display name and timezone; its preferred weight unit defaults to `LB`.
+The historical initial migration creates `WeightUnit`, `User`, and `ExternalIdentity`; the subsequent `20261106120000_remove_user_weight_unit` migration drops the user-unit column and enum while preserving user records and identity mappings. `User` requires a display name and timezone. Units belong to exercise/set metrics, not users. The weighted-reps JSON `weightUnit` contract below remains a domain design draft; this correction implements no exercise persistence. Existing private-domain relationships remain declared in Prisma for future migrations.
 
 `ExternalIdentity` uses the exact `(issuer, subject)` pair as its primary key. Values must be nonblank; issuer trailing slashes and subject case are preserved. Its unique `userId` permits one external identity per user. The foreign key restricts user deletion and primary-key updates while an identity refers to it. Account linking and provider replacement require a separate reviewed design.
 
-`resolveUser` in `src/identity/users.ts` accepts an already verified issuer/subject pair. The caller must validate the access token before calling it; token validation and HTTP integration remain planned. On first resolution, the caller supplies a separate initial profile containing a nonempty `displayName`, a valid `timezone`, and optional `preferredWeightUnit` (`LB` or `KG`). The profile cannot contain email or an owner ID. Nested creation atomically creates both rows; a concurrent unique-key loser resolves the winning mapping without leaving an orphan user. Returning identities keep their existing profile and preferences. Different keys create different users even if their profiles match.
+`resolveUser` in `src/identity/users.ts` accepts an already verified issuer/subject pair. The caller must validate the access token before calling it; the HTTP authentication boundary now performs that verification. On first resolution, the caller supplies a separate initial profile containing a nonempty `displayName`, a valid `timezone`. The profile cannot contain email or an owner ID. HTTP authentication supplies `Workout user` / `UTC` for first-time users. These are neutral defaults, not inferred provider or local preferences; no provider profile is fetched. Conversational preference editing remains planned. Nested creation atomically creates both rows; a concurrent unique-key loser resolves the winning mapping without leaving an orphan user. Returning identities keep their existing display name and timezone. Different keys create different users even if their profiles match.
 
 The [explicit local bootstrap](../README.md#local-bootstrap-user) creates an unlinked application user with a stable UUID. It neither creates an Auth0 account nor links to the first external login. Neither a profile name nor a model-supplied owner ID selects an authenticated user.
 
@@ -145,9 +145,9 @@ Training-plan acceptance and progression behavior remain agent/service policies.
 
 ## Verification and status
 
-Prisma 7.10.1 formatting and structural validation pass for the schema. The reviewed identity migration is applied and tested in fresh isolated PostgreSQL databases, including exact-key lookup, concurrency, rollback, restrictive relationships, preference preservation, and explicit bootstrap behavior. Structural validation alone does not verify the remaining domain invariants.
+Prisma 7.10.1 formatting and structural validation pass for the schema. The reviewed identity migrations are applied and tested in fresh isolated PostgreSQL databases, including exact-key lookup, concurrency, rollback, restrictive relationships, display-name/timezone preservation, explicit bootstrap behavior, and upgrades from populated historical identity tables without changing retained records or mappings. Structural validation alone does not verify the remaining domain invariants.
 
-The application client is generated into ignored output. Database-free typechecks, compilation, and tests pass. The [local MCP server](../README.md#local-mcp-server) exposes status metadata only and does not use identity persistence. Normal developer database migration state is not established by these tests; see the [migration workflow](../README.md#migration-workflow) and [integration test boundary](../README.md#postgresql-integration-tests).
+The application client is generated into ignored output. Database-free typechecks, compilation, and tests pass. The [local MCP server](../README.md#local-mcp-server) exposes a status tool and uses identity persistence after bearer-token verification. Normal developer database migration state is not established by these tests; see the [migration workflow](../README.md#migration-workflow) and [integration test boundary](../README.md#postgresql-integration-tests).
 
 [Prisma 7 schema reference](https://www.prisma.io/docs/orm/v7/reference/prisma-schema-reference)
 

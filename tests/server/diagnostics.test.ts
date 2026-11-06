@@ -1,3 +1,4 @@
+import { authenticatedFetch as fetch } from "./authentication-fixture.js";
 import assert from "node:assert/strict";
 import { createServer as httpServer } from "node:http";
 import { Writable } from "node:stream";
@@ -5,7 +6,7 @@ import { test } from "node:test";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { createApplication } from "../../src/server/application.js";
+import { createApplication } from "./authentication-fixture.js";
 import { ErrorDefinitions } from "../../src/diagnostics/error-definitions.js";
 import { ToolRegistrar } from "../../src/server/tools/tool-registrar.js";
 import { ApplicationError, toolBoundary } from "../../src/diagnostics/errors.js";
@@ -170,7 +171,7 @@ test("concurrent request failures retain their own correlation across asynchrono
 });
 
 test("logs startup port and one shutdown event and flushes a delayed destination", async () => {
-    const { startServer } = await import("../../src/server/listener.js");
+    const { startServer } = await import("./authentication-fixture.js");
     let text = "";
     const destination = new Writable({ write(chunk, _encoding, callback) {
         setImmediate(() => { text += chunk.toString(); callback(); });
@@ -187,7 +188,7 @@ test("logs startup port and one shutdown event and flushes a delayed destination
 });
 
 test("logs exactly one completion per successful or malformed request with its header ID and duration", async () => {
-    const { startServer } = await import("../../src/server/listener.js");
+    const { startServer } = await import("./authentication-fixture.js");
     const output = capture();
     const server = await startServer({ host: "127.0.0.1", port: 0 }, { logger: output.logger });
     const client = new Client({ name: secret, version: "1" }, { versionNegotiation: { mode: { pin: "2026-07-28" } } });

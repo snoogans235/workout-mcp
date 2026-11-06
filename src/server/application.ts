@@ -6,9 +6,10 @@ import { randomUUID } from "node:crypto";
 import { createLogger, type DiagnosticLogger } from "../diagnostics/logger.js";
 import { requestContext } from "../diagnostics/errors.js";
 import { createServer } from "./create-server.js";
+import { requireAuthentication, resourceMetadata, type Authentication } from "../authentication/requests.js";
 
 /** Construct an unbound app; each MCP request receives its own server instance. */
-export function createApplication(options: { logger?: DiagnosticLogger; serverFactory?: typeof createServer } = {}) {
+export function createApplication(options: { logger?: DiagnosticLogger; serverFactory?: typeof createServer; authentication?: Authentication } = {}) {
     const logger = options.logger ?? createLogger();
     const handler = createMcpHandler(() => (options.serverFactory ?? createServer)());
     const app = express();
@@ -29,6 +30,15 @@ export function createApplication(options: { logger?: DiagnosticLogger; serverFa
     });
     app.use(createMcpExpressApp({ host: "127.0.0.1" }));
     app.disable("x-powered-by");
+    const authentication = options.authentication;
+    if (authentication) {
+        app.get("/.well-known/oauth-protected-resource", (_request, response) => {
+            response.json(resourceMetadata(authentication.configuration));
+        });
+        app.use("/mcp", requireAuthentication(authentication));
+    } else {
+        app.use("/mcp", (_request, response) => { response.status(401).json({ error: "invalid_token" }); });
+    }
     const nodeHandler = toNodeHandler(handler);
     app.all("/mcp", async (request, response) => { await nodeHandler(request, response, request.body); });
     const errors: ErrorRequestHandler = (error: unknown, _request, response, _next) => {

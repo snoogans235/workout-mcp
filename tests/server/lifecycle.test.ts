@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { connect } from "node:net";
 import { test } from "node:test";
-import { startServer } from "../../src/server/listener.js";
+import { startServer } from "./authentication-fixture.js";
 
 for (const entrypoint of [["--import", "tsx", "src/index.ts"], ["dist/index.js"]]) {
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
     test(`${entrypoint.at(-1)} ${signal} closes partial requests and permits rebinding`, async () => {
         const child = spawn(process.execPath, entrypoint, {
-            env: { ...process.env, MCP_HOST: "127.0.0.1", MCP_PORT: "0", DATABASE_URL: "unused-database-sentinel" },
+            env: { ...process.env, MCP_HOST: "127.0.0.1", MCP_PORT: "0", DATABASE_URL: "postgresql://unused-database-sentinel@127.0.0.1:1/workout", OAUTH_ISSUER: "https://issuer.example/", OAUTH_AUDIENCE: "https://api.example" },
             stdio: ["ignore", "pipe", "pipe"],
         });
         let stdout = "", stderr = "", selected: URL | undefined;
