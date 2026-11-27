@@ -1,0 +1,67 @@
+### Protected resource metadata
+GET {{baseUrl}}/.well-known/oauth-protected-resource
+Accept: application/json
+
+### MCP initialize
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpAccessToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2026-07-28",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "manual-http-client",
+      "version": "0.0.0"
+    }
+  }
+}
+
+
+### MCP initialized notification
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpAccessToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized",
+  "params": {}
+}
+
+
+### MCP list tools
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpAccessToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+
+
+### MCP call server_status
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpAccessToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "server_status",
+    "arguments": {}
+  }
+}

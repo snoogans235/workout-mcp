@@ -1,0 +1,16 @@
+### Auth0 token: client credentials
+# @name auth0Token
+POST {{auth0TokenUrl}}
+Content-Type: application/json
+
+{
+  "client_id": "{{auth0ClientId}}",
+  "client_secret": "{{auth0ClientSecret}}",
+  "audience": "{{auth0Audience}}",
+  "grant_type": "client_credentials",
+  "scope": "{{auth0Scope}}"
+}
+
+> {%
+    client.global.set("mcpAccessToken", response.body.access_token);
+%}
