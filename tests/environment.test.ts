@@ -5,6 +5,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { isDevelopment, runtimeEnvironment } from "../src/environment.js";
+
+test("runtime environment defaults to production and accepts only explicit modes", () => {
+    assert.equal(runtimeEnvironment({}), "production");
+    assert.equal(runtimeEnvironment({ NODE_ENV: "" }), "production");
+    assert.equal(runtimeEnvironment({ NODE_ENV: "development" }), "development");
+    assert.equal(runtimeEnvironment({ NODE_ENV: "test" }), "test");
+    assert.equal(runtimeEnvironment({ NODE_ENV: "production" }), "production");
+    assert.equal(isDevelopment({ NODE_ENV: "development" }), true);
+    assert.equal(isDevelopment({ NODE_ENV: "production" }), false);
+    assert.throws(() => runtimeEnvironment({ NODE_ENV: "private-mode" }),
+        { message: "Set NODE_ENV to development, test, or production." });
+});
 
 test("optional environment loading preserves exported values and tolerates a missing file", () => {
     const directory = mkdtempSync(join(tmpdir(), "workout-env-"));

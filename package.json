@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "debug": "tsx --inspect src/index.ts",
     "typecheck": "npm run prisma:generate && tsc --noEmit",
     "typecheck:test": "tsc --project tsconfig.test.json",
     "build": "npm run prisma:generate && tsc",

@@ -3,6 +3,7 @@ node_modules/
 dist/
 src/generated/prisma/
 .env
+/manual/http-client.private.env.json
 .DS_Store
 .idea/
 # Generated project-local agents and shared skills

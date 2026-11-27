@@ -10,6 +10,7 @@ import { createLogger, type DiagnosticLogger } from "../diagnostics/logger.js";
 import { requestContext } from "../diagnostics/errors.js";
 import { createServer } from "./create-server.js";
 import { requireAuthentication, resourceMetadata, type Authentication } from "../authentication/requests.js";
+import { isDevelopment } from "../environment.js";
 
 /** Construct an unbound app; each MCP request receives its own server instance. */
 export function createApplication(options: { logger?: DiagnosticLogger; serverFactory?: typeof createServer; authentication?: Authentication } = {}) {
@@ -83,6 +84,9 @@ export function createApplication(options: { logger?: DiagnosticLogger; serverFa
         const status = error && typeof error === "object" && "status" in error && typeof error.status === "number"
             && error.status >= 400 && error.status < 500 ? error.status : 500;
         if (status >= 500) {
+            if (isDevelopment()) {
+                console.error("[/mcp unhandled error]");
+            }
             requestContext.getStore()?.logger.failure({ event: "application_failed", component: "server", errorCode: "INTERNAL_ERROR", cause: "unexpected_exception" });
         }
         response.status(status).json({ jsonrpc: "2.0", id: null,
