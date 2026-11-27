@@ -19,6 +19,36 @@ function capture() {
     return { logger: createLogger("info", stream), text: () => text };
 }
 
+test("development diagnostics identify unexpected failures without exposing errors", async () => {
+    const previousEnvironment = process.env.NODE_ENV;
+    const previousError = console.error;
+    const diagnostics: unknown[][] = [];
+    process.env.NODE_ENV = "development";
+    console.error = (...values: unknown[]) => { diagnostics.push(values); };
+    const application = createApplication({ serverFactory: (() => { throw new Error(secret); }) as never });
+    const listener = httpServer(application.app);
+    await new Promise<void>(resolve => listener.listen(0, "127.0.0.1", resolve));
+    const address = listener.address();
+    assert.ok(address && typeof address !== "string");
+    try {
+        const response = await fetch(`http://127.0.0.1:${address.port}/mcp`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+        });
+        assert.equal(response.status, 500);
+        assert.deepEqual(diagnostics, [["[/mcp unhandled error]"]]);
+        assert.doesNotMatch(JSON.stringify(diagnostics), new RegExp(secret));
+    } finally {
+        console.error = previousError;
+        if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = previousEnvironment;
+        await application.close();
+        listener.closeAllConnections();
+        await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
+    }
+});
+
 test("logger drops arbitrary and nested secrets and rejects invalid configuration", async () => {
     const output = capture();
     output.logger.failure({ event: "application_failed", component: secret, password: secret,
